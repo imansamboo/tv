@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --background: #070b14;
+  --foreground: #f6f1e4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-vazirmatn);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  min-height: 100vh;
+  background-image:
+    radial-gradient(1200px 500px at 100% -10%, rgba(212, 160, 23, 0.16), transparent 45%),
+    radial-gradient(900px 420px at 0% 100%, rgba(56, 89, 160, 0.22), transparent 42%);
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+select option {
+  color: #111;
+}
