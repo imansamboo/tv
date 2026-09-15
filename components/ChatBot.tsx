@@ -153,10 +153,11 @@ export function ChatBot() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="grid h-14 w-14 place-items-center rounded-full bg-amber-400 text-lg font-black text-black shadow-lg shadow-amber-400/30"
-        aria-label="گفتگو با مشاور"
+        className="flex items-center gap-2 rounded-full bg-amber-400 px-4 py-3 text-sm font-black text-black shadow-lg shadow-amber-400/30"
+        aria-label="باز کردن گفتگوی مشاور کمپین"
       >
-        {open ? "×" : "💬"}
+        <span className="text-lg">{open ? "×" : "💬"}</span>
+        مشاور کمپین
       </button>
     </div>
   );
