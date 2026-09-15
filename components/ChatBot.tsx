@@ -156,7 +156,7 @@ export function ChatBot() {
         className="grid h-14 w-14 place-items-center rounded-full bg-amber-400 text-lg font-black text-black shadow-lg shadow-amber-400/30"
         aria-label="گفتگو با مشاور"
       >
-        {open ? "×" : "چت"}
+        {open ? "×" : "💬"}
       </button>
     </div>
   );

@@ -34,6 +34,7 @@ export async function GET() {
     quote,
     submittedAt: requirement.submittedAt,
     updatedAt: requirement.updatedAt,
+    userName: session.name,
   });
 }
 

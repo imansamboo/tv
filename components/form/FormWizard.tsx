@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PriceBox } from "@/components/PriceBox";
 import { Field, fieldClass, OptionButton, PrimaryButton } from "@/components/ui";
 import {
@@ -31,6 +31,7 @@ type FormPayload = {
   data: RequirementData;
   quote: Quote;
   submittedAt: string | null;
+  userName?: string;
 };
 
 export function FormWizard() {
@@ -44,8 +45,30 @@ export function FormWizard() {
   const [data, setData] = useState<RequirementData>(emptyRequirement);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
+  const formRef = useRef<HTMLFormElement>(null);
   const quote = useMemo(() => calculateQuote(data), [data]);
   const locked = status === "SUBMITTED";
+
+  function collectFromDom(current: RequirementData): RequirementData {
+    const form = formRef.current;
+    if (!form) return current;
+    const fd = new FormData(form);
+    const next = { ...current };
+    const assign = (key: keyof RequirementData) => {
+      const value = fd.get(String(key));
+      if (typeof value === "string") {
+        Object.assign(next, { [key]: value });
+      }
+    };
+    assign("fullName");
+    assign("phone");
+    assign("city");
+    assign("address");
+    assign("postalCode");
+    assign("viewingDistance");
+    assign("roomNotes");
+    return next;
+  }
 
   const patch = useCallback((partial: Partial<RequirementData>) => {
     setData((current) => ({ ...current, ...partial }));
@@ -57,7 +80,11 @@ export function FormWizard() {
       .then((payload: FormPayload) => {
         setStatus(payload.status);
         setStep(payload.currentStep ?? 0);
-        setData(payload.data);
+        const incoming = payload.data;
+        if (!incoming.fullName && payload.userName) {
+          incoming.fullName = payload.userName;
+        }
+        setData(incoming);
         setSubmittedAt(payload.submittedAt);
       })
       .finally(() => setLoading(false));
@@ -79,7 +106,9 @@ export function FormWizard() {
   }, [data, step, loading, locked]);
 
   function goNext() {
-    const message = validateStep(step, data);
+    const nextData = collectFromDom(data);
+    setData(nextData);
+    const message = validateStep(step, nextData);
     if (message) {
       setError(message);
       return;
@@ -89,7 +118,9 @@ export function FormWizard() {
   }
 
   async function submit() {
-    const message = validateStep(step, data);
+    const nextData = collectFromDom(data);
+    setData(nextData);
+    const message = validateStep(step, nextData);
     if (message) {
       setError(message);
       return;
@@ -98,7 +129,7 @@ export function FormWizard() {
     const saveRes = await fetch("/api/form", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data, currentStep: step }),
+      body: JSON.stringify({ data: nextData, currentStep: step }),
     });
     if (!saveRes.ok) {
       const payload = await saveRes.json();
@@ -150,62 +181,81 @@ export function FormWizard() {
           </div>
         )}
 
+      <form ref={formRef} onSubmit={(event) => event.preventDefault()}>
         <div className="mb-6">
           <p className="text-amber-300">{FORM_STEPS[step].desc}</p>
           <h2 className="mt-1 text-2xl font-black">{FORM_STEPS[step].title}</h2>
         </div>
 
         {step === 0 && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4">
             <Field label="نام و نام خانوادگی">
               <input
+                name="fullName"
+                id="fullName"
                 className={fieldClass}
                 value={data.fullName}
                 disabled={locked}
+                placeholder="مثلاً سارا کریمی"
+                autoComplete="name"
                 onChange={(event) => patch({ fullName: event.target.value })}
+                onInput={(event) => patch({ fullName: event.currentTarget.value })}
               />
             </Field>
-            <Field label="موبایل" hint="برای هماهنگی ارسال و نصب">
+            <Field label="شماره موبایل" hint="برای هماهنگی ارسال، نصب و کمپین فروشگاه">
               <input
+                name="phone"
+                id="phone"
                 className={fieldClass}
                 value={data.phone}
                 disabled={locked}
                 onChange={(event) => patch({ phone: event.target.value })}
-                placeholder="0912xxxxxxx"
+                onInput={(event) => patch({ phone: event.currentTarget.value })}
+                placeholder="09121112233"
+                inputMode="tel"
+                autoComplete="tel"
               />
             </Field>
-            <Field label="شهر">
-              <select
-                className={fieldClass}
-                value={data.city}
-                disabled={locked}
-                onChange={(event) => patch({ city: event.target.value })}
-              >
-                {CITIES.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="کد پستی (اختیاری)">
-              <input
-                className={fieldClass}
-                value={data.postalCode}
-                disabled={locked}
-                onChange={(event) => patch({ postalCode: event.target.value })}
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label="آدرس کامل تحویل">
-                <textarea
-                  className={`${fieldClass} min-h-24`}
-                  value={data.address}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="شهر">
+                <select
+                  name="city"
+                  id="city"
+                  className={fieldClass}
+                  value={data.city}
                   disabled={locked}
-                  onChange={(event) => patch({ address: event.target.value })}
+                  onChange={(event) => patch({ city: event.target.value })}
+                >
+                  {CITIES.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="کد پستی (اختیاری)">
+                <input
+                  name="postalCode"
+                  id="postalCode"
+                  className={fieldClass}
+                  value={data.postalCode}
+                  disabled={locked}
+                  onChange={(event) => patch({ postalCode: event.target.value })}
                 />
               </Field>
             </div>
+            <Field label="آدرس کامل تحویل">
+              <textarea
+                name="address"
+                id="address"
+                className={`${fieldClass} min-h-24`}
+                value={data.address}
+                disabled={locked}
+                placeholder="خیابان، پلاک، واحد"
+                onChange={(event) => patch({ address: event.target.value })}
+                onInput={(event) => patch({ address: event.currentTarget.value })}
+              />
+            </Field>
           </div>
         )}
 
@@ -341,6 +391,7 @@ export function FormWizard() {
             </div>
             <Field label="فاصله تقریبی نشستن تا تلویزیون">
               <input
+                name="viewingDistance"
                 className={fieldClass}
                 disabled={locked}
                 value={data.viewingDistance}
@@ -350,6 +401,7 @@ export function FormWizard() {
             </Field>
             <Field label="توضیح مسیر حمل و فضای نصب">
               <textarea
+                name="roomNotes"
                 className={`${fieldClass} min-h-24`}
                 disabled={locked}
                 value={data.roomNotes}
@@ -501,6 +553,7 @@ export function FormWizard() {
             </PrimaryButton>
           )}
         </div>
+      </form>
       </section>
       <div className="lg:sticky lg:top-24 lg:self-start">
         <PriceBox data={data} quote={quote} />
