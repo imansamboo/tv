@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mergeRequirement } from "@/lib/form";
-import { calculateQuote } from "@/lib/pricing";
+import { summarizeRequirements } from "@/lib/summary";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { firstInvalidStep } from "@/lib/validate";
@@ -33,23 +33,23 @@ export async function POST() {
     );
   }
 
-  const quote = calculateQuote(data);
+  const summary = summarizeRequirements(data);
   const saved = await prisma.requirement.update({
     where: { userId: session.sub },
     data: {
       status: "SUBMITTED",
       submittedAt: new Date(),
       currentStep: 6,
-      tvPrice: quote.tvPrice,
-      extrasPrice: quote.extrasPrice,
-      totalPrice: quote.total,
+      tvPrice: 0,
+      extrasPrice: summary.featureCount,
+      totalPrice: summary.completionPercent,
       data: JSON.stringify(data),
     },
   });
 
   return NextResponse.json({
     ok: true,
-    quote,
+    summary,
     submittedAt: saved.submittedAt,
   });
 }

@@ -2,17 +2,26 @@ import Link from "next/link";
 
 const highlights = [
   {
-    title: "انتخاب سایز با قیمت زنده",
-    text: "مثل فروشگاه‌های بزرگ، دکمه ۳۲ تا ۸۵ اینچ دارید و با هر انتخاب مبلغ عوض می‌شود.",
+    title: "نیازمندی‌های فروشگاه، نه خرید مشتری",
+    text: "فرم برای صاحب فروشگاه است: چه برندها، امکانات، درگاه پرداخت و پنل مدیریتی می‌خواهید.",
   },
   {
-    title: "شفافیت قبل از درگاه",
-    text: "هزینه ارسال، کاور محافظ و بیمه حمل در مرحله آخر به فاکتور اضافه می‌شود؛ نه بعد از پرداخت.",
+    title: "تجربه خرید مشتری نهایی",
+    text: "پیکربندی مرحله‌ای، فیلتر، مقایسه، ارسال و نصب — همان چیزهایی که در فروشگاه‌های بزرگ می‌بینید.",
   },
   {
-    title: "ادامه از همان‌جا که ماندید",
-    text: "با ایمیل ثبت‌نام کنید، پیش‌نویس ذخیره می‌شود و بعد از ثبت نهایی دیگر فرم قفل است.",
+    title: "پیش‌نویس و ثبت نهایی",
+    text: "با ایمیل ثبت‌نام کنید، مرحله‌به‌مرحله پر کنید و بعد از ثبت نهایی فرم قفل می‌شود.",
   },
+];
+
+const sampleSteps = [
+  "معرفی فروشگاه و وضعیت سایت فعلی",
+  "برندها و بازه سایزهای کاتالوگ",
+  "امکانات سایت برای مشتری (فیلتر، مقایسه، چت)",
+  "درگاه پرداخت، ارسال، نصب و گارانتی",
+  "پنل مدیریت سفارش و موجودی",
+  "سبک طراحی و سایت‌های مرجع",
 ];
 
 export default function Home() {
@@ -20,12 +29,12 @@ export default function Home() {
     <div className="space-y-14">
       <section className="grid items-center gap-10 lg:grid-cols-[1.2fr_0.8fr]">
         <div>
-          <p className="text-sm text-amber-300">فروشگاه تخصصی تلویزیون</p>
+          <p className="text-sm text-amber-300">سامانه جمع‌آوری نیازمندی فروشگاه تلویزیون</p>
           <h1 className="mt-3 max-w-3xl text-4xl font-black leading-14 sm:text-5xl">
-            همه نیاز خرید تلویزیون را در یک فرم چندمرحله‌ای جمع می‌کنیم
+            برای سایت فروش تلویزیون‌تان چه می‌خواهید؟
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-9 text-white/70">
-            با بررسی فروشگاه‌هایی مثل دیجی‌کالا، تکنولایف، سامسونگ و بست‌بای مشخص شد مشتری علاوه بر سایز و برند، به نصب، حمل داخل منزل، کاور، بیمه مسیر و گارانتی هم فکر می‌کند. پارس‌تی‌وی همین مسیر را به فارسی و مرحله‌به‌مرحله پیاده کرده است.
+            این فرم برای صاحب فروشگاه است، نه مشتری. شما می‌گویید کاتالوگ، تجربه خرید، پرداخت، ارسال و پنل مدیریت چطور باشد؛ ما بر اساس آن سایت فروش تلویزیون را طراحی می‌کنیم.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -43,25 +52,15 @@ export default function Home() {
           </div>
         </div>
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <p className="text-sm text-white/50">نمونه فاکتور قبل از درگاه</p>
-          <ul className="mt-4 space-y-3 text-sm">
-            <li className="flex justify-between rounded-2xl bg-black/20 px-4 py-3">
-              <span>تلویزیون ۶۵ اینچ QLED</span>
-              <span className="text-amber-300">۴۹٬۵۰۰٬۰۰۰</span>
-            </li>
-            <li className="flex justify-between rounded-2xl bg-black/20 px-4 py-3">
-              <span>ارسال داخل منزل</span>
-              <span className="text-amber-300">۲٬۱۴۰٬۰۰۰</span>
-            </li>
-            <li className="flex justify-between rounded-2xl bg-black/20 px-4 py-3">
-              <span>کاور محافظ</span>
-              <span className="text-amber-300">۸۹۰٬۰۰۰</span>
-            </li>
-            <li className="flex justify-between rounded-2xl bg-black/20 px-4 py-3">
-              <span>بیمه حمل</span>
-              <span className="text-amber-300">۱٬۲۴۰٬۰۰۰</span>
-            </li>
-          </ul>
+          <p className="text-sm text-white/50">مراحل فرم نیازمندی</p>
+          <ol className="mt-4 space-y-3 text-sm">
+            {sampleSteps.map((item, index) => (
+              <li key={item} className="flex gap-3 rounded-2xl bg-black/20 px-4 py-3">
+                <span className="font-black text-amber-300">{index + 1}</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 

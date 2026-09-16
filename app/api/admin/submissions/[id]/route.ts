@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { mergeRequirement } from "@/lib/form";
-import { calculateQuote } from "@/lib/pricing";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -28,10 +27,8 @@ export async function GET(
     status: row.status,
     currentStep: row.currentStep,
     data,
-    quote: calculateQuote(data),
-    tvPrice: row.tvPrice,
-    extrasPrice: row.extrasPrice,
-    totalPrice: row.totalPrice,
+    featureCount: row.extrasPrice,
+    completionPercent: row.totalPrice,
     submittedAt: row.submittedAt,
     updatedAt: row.updatedAt,
     user: row.user,

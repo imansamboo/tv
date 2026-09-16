@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PriceBox } from "@/components/PriceBox";
+import { RequirementsSummary } from "@/components/RequirementsSummary";
 import { emptyRequirement, type RequirementData } from "@/lib/form";
-import { calculateQuote } from "@/lib/pricing";
+import { summarizeRequirements } from "@/lib/summary";
 
 export default function SuccessPage() {
   const [data, setData] = useState<RequirementData>(emptyRequirement());
@@ -19,21 +19,21 @@ export default function SuccessPage() {
       });
   }, []);
 
-  const quote = calculateQuote(data);
+  const summary = summarizeRequirements(data);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <section className="rounded-3xl border border-white/10 bg-[#101826] p-8">
-        <p className="text-emerald-300">درخواست شما ثبت شد</p>
-        <h1 className="mt-2 text-3xl font-black">دیگر امکان پر کردن مجدد فرم نیست</h1>
+        <p className="text-emerald-300">نیازمندی‌های شما ثبت شد</p>
+        <h1 className="mt-2 text-3xl font-black">فرم قفل شد و آماده بررسی است</h1>
         <p className="mt-4 leading-8 text-white/70">
-          فروشگاه نیاز شما را دریافت کرده است. اگر وارد حساب شوید همان اطلاعات قبلی را به‌صورت فقط‌خواندنی می‌بینید. برای کمپین‌های بعدی می‌توانید از چت‌بات شماره بدهید.
+          تیم طراحی سایت نیازمندی‌های فروشگاه شما را دریافت کرد. اگر دوباره وارد شوید همان پاسخ‌ها را به‌صورت فقط‌خواندنی می‌بینید.
         </p>
         {!locked && (
           <p className="mt-4 text-amber-200">
             هنوز ثبت نهایی نشده. از{" "}
             <Link className="underline" href="/form">
-              فرم درخواست
+              فرم نیازمندی‌ها
             </Link>{" "}
             ادامه دهید.
           </p>
@@ -45,7 +45,7 @@ export default function SuccessPage() {
           مشاهده خلاصه ذخیره‌شده
         </Link>
       </section>
-      <PriceBox data={data} quote={quote} />
+      <RequirementsSummary data={data} summary={summary} />
     </div>
   );
 }

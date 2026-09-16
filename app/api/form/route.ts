@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { emptyRequirement, mergeRequirement } from "@/lib/form";
-import { calculateQuote } from "@/lib/pricing";
+import { summarizeRequirements } from "@/lib/summary";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -17,8 +17,8 @@ async function loadOrCreate(userId: string) {
     });
   }
   const data = mergeRequirement(JSON.parse(requirement.data));
-  const quote = calculateQuote(data);
-  return { requirement, data, quote };
+  const summary = summarizeRequirements(data);
+  return { requirement, data, summary };
 }
 
 export async function GET() {
@@ -26,12 +26,12 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "وارد شوید." }, { status: 401 });
   }
-  const { requirement, data, quote } = await loadOrCreate(session.sub);
+  const { requirement, data, summary } = await loadOrCreate(session.sub);
   return NextResponse.json({
     status: requirement.status,
     currentStep: requirement.currentStep,
     data,
-    quote,
+    summary,
     submittedAt: requirement.submittedAt,
     updatedAt: requirement.updatedAt,
     userName: session.name,
@@ -57,16 +57,16 @@ export async function PUT(request: Request) {
   const currentStep = Number.isInteger(body?.currentStep)
     ? Math.min(6, Math.max(0, body.currentStep))
     : requirement.currentStep;
-  const quote = calculateQuote(data);
+  const summary = summarizeRequirements(data);
 
   const saved = await prisma.requirement.update({
     where: { userId: session.sub },
     data: {
       data: JSON.stringify(data),
       currentStep,
-      tvPrice: quote.tvPrice,
-      extrasPrice: quote.extrasPrice,
-      totalPrice: quote.total,
+      tvPrice: 0,
+      extrasPrice: summary.featureCount,
+      totalPrice: summary.completionPercent,
     },
   });
 
@@ -75,7 +75,7 @@ export async function PUT(request: Request) {
     status: saved.status,
     currentStep: saved.currentStep,
     data,
-    quote,
+    summary,
     updatedAt: saved.updatedAt,
   });
 }

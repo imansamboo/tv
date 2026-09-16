@@ -3,25 +3,26 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
-import { BRANDS, SIZES } from "@/lib/catalog";
-import { faDate, toman } from "@/lib/format";
+import { labelOf } from "@/lib/catalog";
+import { BUSINESS_TYPES } from "@/lib/catalog";
+import { faDate } from "@/lib/format";
 
 type Row = {
   id: string;
   status: "DRAFT" | "SUBMITTED";
   email: string;
-  name: string;
-  phone: string;
+  contactName: string;
+  storeName: string;
+  businessType: string;
   city: string;
-  sizeInches: number | null;
-  brand: string;
-  totalPrice: number;
+  featureCount: number;
+  completionPercent: number;
   submittedAt: string | null;
   updatedAt: string;
 };
 
 type Payload = {
-  stats: { users: number; drafts: number; submitted: number; leads: number };
+  stats: { users: number; drafts: number; submitted: number };
   submissions: Row[];
 };
 
@@ -40,18 +41,17 @@ export default function AdminPage() {
     const query = q.trim();
     if (!query) return list;
     return list.filter((row) =>
-      [row.email, row.name, row.phone, row.city].join(" ").includes(query),
+      [row.email, row.contactName, row.storeName, row.city].join(" ").includes(query),
     );
   }, [payload, q]);
 
   return (
     <AdminShell>
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-3">
         {[
-          ["مشتریان", payload?.stats.users],
+          ["فروشگاه‌ها", payload?.stats.users],
           ["پیش‌نویس", payload?.stats.drafts],
           ["ثبت نهایی", payload?.stats.submitted],
-          ["شماره کمپین", payload?.stats.leads],
         ].map(([label, value]) => (
           <div key={String(label)} className="rounded-3xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs text-white/45">{label}</p>
@@ -62,14 +62,14 @@ export default function AdminPage() {
       <input
         value={q}
         onChange={(event) => setQ(event.target.value)}
-        placeholder="جستجو نام، ایمیل یا موبایل"
+        placeholder="جستجو نام فروشگاه، رابط یا ایمیل"
         className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-amber-400"
       />
       <div className="overflow-x-auto rounded-3xl border border-white/10">
         <table className="w-full min-w-[720px] text-right text-sm">
           <thead className="bg-white/5 text-white/50">
             <tr>
-              {["مشتری", "تماس", "تلویزیون", "مبلغ", "وضعیت", ""].map((h) => (
+              {["فروشگاه", "رابط", "فعالیت", "پیشرفت", "وضعیت", ""].map((h) => (
                 <th key={h} className="px-4 py-3 font-medium">
                   {h}
                 </th>
@@ -80,20 +80,20 @@ export default function AdminPage() {
             {rows.map((row) => (
               <tr key={row.id} className="border-t border-white/10">
                 <td className="px-4 py-3">
-                  <div className="font-medium">{row.name || "—"}</div>
-                  <div className="text-xs text-white/45">{row.email}</div>
-                </td>
-                <td className="px-4 py-3">
-                  {row.phone || "—"}
+                  <div className="font-medium">{row.storeName || "—"}</div>
                   <div className="text-xs text-white/45">{row.city}</div>
                 </td>
                 <td className="px-4 py-3">
-                  {SIZES.find((item) => item.inches === row.sizeInches)?.label || "نامشخص"}
-                  <div className="text-xs text-white/45">
-                    {BRANDS.find((item) => item.id === row.brand)?.label || "—"}
-                  </div>
+                  <div>{row.contactName || "—"}</div>
+                  <div className="text-xs text-white/45">{row.email}</div>
                 </td>
-                <td className="px-4 py-3">{row.totalPrice ? toman(row.totalPrice) : "—"}</td>
+                <td className="px-4 py-3">
+                  {labelOf(row.businessType, BUSINESS_TYPES)}
+                </td>
+                <td className="px-4 py-3">
+                  {row.completionPercent}%
+                  <div className="text-xs text-white/45">{row.featureCount} امکانات</div>
+                </td>
                 <td className="px-4 py-3">
                   {row.status === "SUBMITTED" ? "ثبت نهایی" : "پیش‌نویس"}
                   <div className="text-xs text-white/45">
@@ -110,7 +110,7 @@ export default function AdminPage() {
           </tbody>
         </table>
         {rows.length === 0 && (
-          <p className="p-6 text-center text-white/45">هنوز درخواستی ثبت نشده است.</p>
+          <p className="p-6 text-center text-white/45">هنوز نیازمندی ثبت نشده است.</p>
         )}
       </div>
     </AdminShell>

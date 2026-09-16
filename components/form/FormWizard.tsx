@@ -2,34 +2,39 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PriceBox } from "@/components/PriceBox";
+import { RequirementsSummary } from "@/components/RequirementsSummary";
 import { Field, fieldClass, OptionButton, PrimaryButton } from "@/components/ui";
 import {
+  ADMIN_FEATURES,
   BRANDS,
+  BUSINESS_TYPES,
+  BUYER_FEATURES,
   CITIES,
-  COVER_BY_SIZE,
-  INSTALL_TYPES,
-  PANELS,
-  REFRESH_RATES,
-  RESOLUTIONS,
-  SHIPMENTS,
-  SIZES,
-  SMART_OS,
-  USAGES,
-  WARRANTY,
-  suggestedOs,
+  DELIVERY_METHODS,
+  DESIGN_STYLES,
+  EXISTING_WEBSITE,
+  INVENTORY_SOURCE,
+  PAYMENT_GATEWAYS,
+  PRODUCT_VOLUME,
+  SIZE_RANGES,
+  labelOf,
+  labelsFor,
 } from "@/lib/catalog";
 import { cn } from "@/lib/cn";
-import { FORM_STEPS, emptyRequirement, type RequirementData } from "@/lib/form";
-import { toman } from "@/lib/format";
-import { calculateQuote, shipmentPrice, type Quote } from "@/lib/pricing";
+import {
+  FORM_STEPS,
+  emptyRequirement,
+  toggleInList,
+  type RequirementData,
+} from "@/lib/form";
+import { summarizeRequirements, type RequirementSummary } from "@/lib/summary";
 import { validateStep } from "@/lib/validate";
 
 type FormPayload = {
   status: "DRAFT" | "SUBMITTED";
   currentStep: number;
   data: RequirementData;
-  quote: Quote;
+  summary: RequirementSummary;
   submittedAt: string | null;
   userName?: string;
 };
@@ -46,27 +51,28 @@ export function FormWizard() {
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
   const formRef = useRef<HTMLFormElement>(null);
-  const quote = useMemo(() => calculateQuote(data), [data]);
+  const summary = useMemo(() => summarizeRequirements(data), [data]);
   const locked = status === "SUBMITTED";
+  const lastStep = FORM_STEPS.length - 1;
 
   function collectFromDom(current: RequirementData): RequirementData {
     const form = formRef.current;
     if (!form) return current;
     const fd = new FormData(form);
     const next = { ...current };
-    const assign = (key: keyof RequirementData) => {
-      const value = fd.get(String(key));
-      if (typeof value === "string") {
-        Object.assign(next, { [key]: value });
-      }
-    };
-    assign("fullName");
-    assign("phone");
-    assign("city");
-    assign("address");
-    assign("postalCode");
-    assign("viewingDistance");
-    assign("roomNotes");
+    for (const key of [
+      "contactName",
+      "storeName",
+      "storeDescription",
+      "buyerNotes",
+      "servicesNotes",
+      "adminNotes",
+      "referenceSites",
+      "designNotes",
+    ] as const) {
+      const value = fd.get(key);
+      if (typeof value === "string") next[key] = value;
+    }
     return next;
   }
 
@@ -81,8 +87,8 @@ export function FormWizard() {
         setStatus(payload.status);
         setStep(payload.currentStep ?? 0);
         const incoming = payload.data;
-        if (!incoming.fullName && payload.userName) {
-          incoming.fullName = payload.userName;
+        if (!incoming.contactName && payload.userName) {
+          incoming.contactName = payload.userName;
         }
         setData(incoming);
         setSubmittedAt(payload.submittedAt);
@@ -114,7 +120,7 @@ export function FormWizard() {
       return;
     }
     setError("");
-    setStep((value) => Math.min(6, value + 1));
+    setStep((value) => Math.min(lastStep, value + 1));
   }
 
   async function submit() {
@@ -143,7 +149,7 @@ export function FormWizard() {
       if (typeof payload.step === "number") setStep(payload.step);
       return;
     }
-    router.push("/form/pay");
+    router.push("/form/success");
   }
 
   if (loading) {
@@ -177,386 +183,399 @@ export function FormWizard() {
 
         {locked && (
           <div className="mb-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
-            این درخواست در {submittedAt ? new Date(submittedAt).toLocaleString("fa-IR") : "گذشته"} ثبت نهایی شده و دیگر قابل ویرایش نیست.
+            این نیازمندی‌ها در {submittedAt ? new Date(submittedAt).toLocaleString("fa-IR") : "گذشته"} ثبت نهایی شده و دیگر قابل ویرایش نیست.
           </div>
         )}
 
-      <form ref={formRef} onSubmit={(event) => event.preventDefault()}>
-        <div className="mb-6">
-          <p className="text-amber-300">{FORM_STEPS[step].desc}</p>
-          <h2 className="mt-1 text-2xl font-black">{FORM_STEPS[step].title}</h2>
-        </div>
+        <form ref={formRef} onSubmit={(event) => event.preventDefault()}>
+          <div className="mb-6">
+            <p className="text-amber-300">{FORM_STEPS[step].desc}</p>
+            <h2 className="mt-1 text-2xl font-black">{FORM_STEPS[step].title}</h2>
+          </div>
 
-        {step === 0 && (
-          <div className="grid gap-4">
-            <Field label="نام و نام خانوادگی">
-              <input
-                name="fullName"
-                id="fullName"
-                className={fieldClass}
-                value={data.fullName}
-                disabled={locked}
-                placeholder="مثلاً سارا کریمی"
-                autoComplete="name"
-                onChange={(event) => patch({ fullName: event.target.value })}
-                onInput={(event) => patch({ fullName: event.currentTarget.value })}
-              />
-            </Field>
-            <Field label="شماره موبایل" hint="برای هماهنگی ارسال، نصب و کمپین فروشگاه">
-              <input
-                name="phone"
-                id="phone"
-                className={fieldClass}
-                value={data.phone}
-                disabled={locked}
-                onChange={(event) => patch({ phone: event.target.value })}
-                onInput={(event) => patch({ phone: event.currentTarget.value })}
-                placeholder="09121112233"
-                inputMode="tel"
-                autoComplete="tel"
-              />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="شهر">
-                <select
-                  name="city"
-                  id="city"
-                  className={fieldClass}
-                  value={data.city}
-                  disabled={locked}
-                  onChange={(event) => patch({ city: event.target.value })}
-                >
-                  {CITIES.map((city) => (
-                    <option key={city.id} value={city.id}>
-                      {city.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="کد پستی (اختیاری)">
+          {step === 0 && (
+            <div className="grid gap-4">
+              <Field label="نام رابط فروشگاه">
                 <input
-                  name="postalCode"
-                  id="postalCode"
+                  name="contactName"
                   className={fieldClass}
-                  value={data.postalCode}
+                  value={data.contactName}
                   disabled={locked}
-                  onChange={(event) => patch({ postalCode: event.target.value })}
+                  placeholder="مثلاً علی محمدی"
+                  onChange={(event) => patch({ contactName: event.target.value })}
+                />
+              </Field>
+              <Field label="نام فروشگاه">
+                <input
+                  name="storeName"
+                  className={fieldClass}
+                  value={data.storeName}
+                  disabled={locked}
+                  placeholder="مثلاً پارس الکترونیک"
+                  onChange={(event) => patch({ storeName: event.target.value })}
+                />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {BUSINESS_TYPES.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.businessType === item.id}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() => !locked && patch({ businessType: item.id })}
+                  />
+                ))}
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="شهر فعالیت">
+                  <select
+                    name="city"
+                    className={fieldClass}
+                    value={data.city}
+                    disabled={locked}
+                    onChange={(event) => patch({ city: event.target.value })}
+                  >
+                    {CITIES.map((city) => (
+                      <option key={city.id} value={city.id}>
+                        {city.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {EXISTING_WEBSITE.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.existingWebsite === item.id}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() => !locked && patch({ existingWebsite: item.id })}
+                  />
+                ))}
+              </div>
+              <Field label="توضیح کوتاه درباره فروشگاه">
+                <textarea
+                  name="storeDescription"
+                  className={`${fieldClass} min-h-24`}
+                  value={data.storeDescription}
+                  disabled={locked}
+                  placeholder="چند سال است فروش تلویزیون می‌کنید؟ مشتری‌های شما بیشتر حضوری می‌خرند یا آنلاین؟"
+                  onChange={(event) => patch({ storeDescription: event.target.value })}
                 />
               </Field>
             </div>
-            <Field label="آدرس کامل تحویل">
-              <textarea
-                name="address"
-                id="address"
-                className={`${fieldClass} min-h-24`}
-                value={data.address}
-                disabled={locked}
-                placeholder="خیابان، پلاک، واحد"
-                onChange={(event) => patch({ address: event.target.value })}
-                onInput={(event) => patch({ address: event.currentTarget.value })}
-              />
-            </Field>
-          </div>
-        )}
-
-        {step === 1 && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {SIZES.map((size) => (
-              <OptionButton
-                key={size.inches}
-                selected={data.sizeInches === size.inches}
-                title={size.label}
-                subtitle={`${size.hint} · فاصله دید ${size.viewing}`}
-                meta={toman(
-                  calculateQuote({ ...data, sizeInches: size.inches }).tvPrice ||
-                    size.basePrice,
-                )}
-                onClick={() => !locked && patch({ sizeInches: size.inches })}
-              />
-            ))}
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {BRANDS.map((brand) => (
-                <OptionButton
-                  key={brand.id}
-                  selected={data.brand === brand.id}
-                  title={brand.label}
-                  subtitle={brand.hint}
-                  meta={
-                    data.sizeInches
-                      ? toman(calculateQuote({ ...data, brand: brand.id }).tvPrice)
-                      : undefined
-                  }
-                  onClick={() =>
-                    !locked &&
-                    patch({
-                      brand: brand.id,
-                      smartOs: data.smartOs || suggestedOs(brand.id),
-                    })
-                  }
-                />
-              ))}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {PANELS.map((panel) => (
-                <OptionButton
-                  key={panel.id}
-                  selected={data.panelType === panel.id}
-                  title={panel.label}
-                  subtitle={panel.hint}
-                  onClick={() => !locked && patch({ panelType: panel.id })}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-3">
-              {RESOLUTIONS.map((item) => (
-                <OptionButton
-                  key={item.id}
-                  selected={data.resolution === item.id}
-                  title={item.label}
-                  subtitle={item.hint}
-                  onClick={() => !locked && patch({ resolution: item.id })}
-                />
-              ))}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {SMART_OS.map((item) => (
-                <OptionButton
-                  key={item.id}
-                  selected={data.smartOs === item.id}
-                  title={item.label}
-                  onClick={() => !locked && patch({ smartOs: item.id })}
-                />
-              ))}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {REFRESH_RATES.map((item) => (
-                <OptionButton
-                  key={item.id}
-                  selected={data.refreshRate === item.id}
-                  title={item.label}
-                  subtitle={item.hint}
-                  onClick={() => !locked && patch({ refreshRate: item.id })}
-                />
-              ))}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {USAGES.map((item) => (
-                <OptionButton
-                  key={item.id}
-                  selected={data.usage === item.id}
-                  title={item.label}
-                  onClick={() => !locked && patch({ usage: item.id })}
-                />
-              ))}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <OptionButton
-                selected={data.hdr}
-                title="HDR / Dolby Vision"
-                subtitle="رنگ و کنتراست بهتر برای فیلم"
-                onClick={() => !locked && patch({ hdr: !data.hdr })}
-              />
-              <OptionButton
-                selected={data.hdmi21}
-                title="HDMI 2.1 برای کنسول"
-                subtitle="مناسب PS5 و Xbox Series"
-                onClick={() => !locked && patch({ hdmi21: !data.hdmi21 })}
-              />
-            </div>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {INSTALL_TYPES.map((item) => (
-                <OptionButton
-                  key={item.id}
-                  selected={data.installType === item.id}
-                  title={item.label}
-                  subtitle={item.hint}
-                  onClick={() => !locked && patch({ installType: item.id })}
-                />
-              ))}
-            </div>
-            <Field label="فاصله تقریبی نشستن تا تلویزیون">
-              <input
-                name="viewingDistance"
-                className={fieldClass}
-                disabled={locked}
-                value={data.viewingDistance}
-                placeholder="مثلاً ۲٫۵ متر"
-                onChange={(event) => patch({ viewingDistance: event.target.value })}
-              />
-            </Field>
-            <Field label="توضیح مسیر حمل و فضای نصب">
-              <textarea
-                name="roomNotes"
-                className={`${fieldClass} min-h-24`}
-                disabled={locked}
-                value={data.roomNotes}
-                placeholder="آسانسور، راهرو باریک، دیوار گچی و ..."
-                onChange={(event) => patch({ roomNotes: event.target.value })}
-              />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <OptionButton
-                selected={data.professionalInstall}
-                title="نصب توسط تکنسین"
-                subtitle={data.installType === "wall" ? toman(1_800_000) : toman(450_000)}
-                onClick={() => !locked && patch({ professionalInstall: !data.professionalInstall })}
-              />
-              <OptionButton
-                selected={data.wallMountKit}
-                title="براکت دیواری"
-                subtitle={toman(980_000)}
-                onClick={() => !locked && patch({ wallMountKit: !data.wallMountKit })}
-              />
-              <OptionButton
-                selected={data.oldTvHaulAway}
-                title="جمع‌آوری تلویزیون قبلی"
-                subtitle={toman(650_000)}
-                onClick={() => !locked && patch({ oldTvHaulAway: !data.oldTvHaulAway })}
-              />
-            </div>
-          </div>
-        )}
-
-        {step === 5 && (
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-7 text-amber-100">
-              این مرحله هزینه‌های قبل از درگاه پرداخت است: ارسال، کاور محافظ صفحه، و بیمه حمل. با انتخاب هر گزینه مبلغ نهایی همان لحظه به‌روز می‌شود.
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {SHIPMENTS.map((item) => (
-                <OptionButton
-                  key={item.id}
-                  selected={data.shipmentType === item.id}
-                  title={item.label}
-                  subtitle={item.hint}
-                  meta={
-                    data.sizeInches
-                      ? toman(shipmentPrice(data.sizeInches, item.id, data.city))
-                      : "ابتدا سایز را انتخاب کنید"
-                  }
-                  onClick={() => !locked && patch({ shipmentType: item.id })}
-                />
-              ))}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <OptionButton
-                selected={data.coverProtection}
-                title="کاور محافظ (Covering)"
-                subtitle="محافظ صفحه و لبه‌ها هنگام حمل و نصب"
-                meta={
-                  data.sizeInches
-                    ? toman(COVER_BY_SIZE[data.sizeInches] ?? 680_000)
-                    : undefined
-                }
-                onClick={() => !locked && patch({ coverProtection: !data.coverProtection })}
-              />
-              <OptionButton
-                selected={data.transferInsurance}
-                title="بیمه حمل و نقل"
-                subtitle="خسارت احتمالی در مسیر تا محل شما"
-                meta={data.sizeInches ? "۲٫۵٪ قیمت تلویزیون (حداقل ۳۵۰ هزار)" : undefined}
-                onClick={() => !locked && patch({ transferInsurance: !data.transferInsurance })}
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {WARRANTY.map((item) => (
-                <OptionButton
-                  key={item.id}
-                  selected={data.extendedWarranty === item.id}
-                  title={item.label}
-                  subtitle={item.hint}
-                  onClick={() => !locked && patch({ extendedWarranty: item.id })}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 6 && (
-          <div className="space-y-4 text-sm leading-7">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Info label="نام" value={data.fullName} />
-              <Info label="موبایل" value={data.phone} />
-              <Info label="شهر" value={data.city} />
-              <Info label="آدرس" value={data.address} />
-              <Info
-                label="تلویزیون"
-                value={`${SIZES.find((item) => item.inches === data.sizeInches)?.label || "—"} / ${BRANDS.find((item) => item.id === data.brand)?.label || "—"} / ${PANELS.find((item) => item.id === data.panelType)?.label || "—"}`}
-              />
-              <Info
-                label="کاربری"
-                value={USAGES.find((item) => item.id === data.usage)?.label || "—"}
-              />
-            </div>
-            <ul className="rounded-2xl bg-white/5 p-4">
-              <li className="flex justify-between py-1">
-                <span>قیمت تلویزیون</span>
-                <span>{toman(quote.tvPrice)}</span>
-              </li>
-              {quote.extras.map((line) => (
-                <li key={line.key} className="flex justify-between py-1 text-amber-200">
-                  <span>{line.label}</span>
-                  <span>{toman(line.amount)}</span>
-                </li>
-              ))}
-              <li className="mt-2 flex justify-between border-t border-white/10 pt-2 text-base font-bold">
-                <span>مبلغ نهایی قبل از درگاه</span>
-                <span>{toman(quote.total)}</span>
-              </li>
-            </ul>
-          </div>
-        )}
-
-        {error && <p className="mt-5 text-sm text-rose-400">{error}</p>}
-
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            disabled={step === 0}
-            onClick={() => {
-              setError("");
-              setStep((value) => Math.max(0, value - 1));
-            }}
-            className="rounded-2xl border border-white/15 px-5 py-3 text-sm disabled:opacity-30"
-          >
-            مرحله قبل
-          </button>
-          <div className="text-xs text-white/40">
-            {saving ? "در حال ذخیره..." : savedAt ? "پیش‌نویس ذخیره شد؛ بعداً می‌توانید ادامه دهید." : ""}
-          </div>
-          {step < 6 ? (
-            <PrimaryButton type="button" onClick={goNext} disabled={locked && step === 6}>
-              ادامه
-            </PrimaryButton>
-          ) : locked ? (
-            <PrimaryButton type="button" onClick={() => router.push("/form/success")}>
-              مشاهده رسید
-            </PrimaryButton>
-          ) : (
-            <PrimaryButton type="button" onClick={submit}>
-              ثبت نهایی و ورود به درگاه
-            </PrimaryButton>
           )}
-        </div>
-      </form>
+
+          {step === 1 && (
+            <div className="space-y-6">
+              <p className="text-sm text-white/55">برندهایی که می‌خواهید در سایت بفروشید:</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {BRANDS.map((brand) => (
+                  <OptionButton
+                    key={brand.id}
+                    selected={data.brandsToSell.includes(brand.id)}
+                    title={brand.label}
+                    onClick={() =>
+                      !locked &&
+                      patch({ brandsToSell: toggleInList(data.brandsToSell, brand.id) })
+                    }
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-white/55">بازه سایزهایی که می‌خواهید پوشش دهید:</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {SIZE_RANGES.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.sizeRanges.includes(item.id)}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() =>
+                      !locked && patch({ sizeRanges: toggleInList(data.sizeRanges, item.id) })
+                    }
+                  />
+                ))}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {PRODUCT_VOLUME.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.productVolume === item.id}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() => !locked && patch({ productVolume: item.id })}
+                  />
+                ))}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {INVENTORY_SOURCE.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.inventorySource === item.id}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() => !locked && patch({ inventorySource: item.id })}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-7 text-amber-100">
+                این بخش برای مشتری نهایی سایت است؛ نه برای خود شما. چه تجربه‌ای می‌خواهید خریدار تلویزیون داشته باشد؟
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {BUYER_FEATURES.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.buyerFeatures.includes(item.id)}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() =>
+                      !locked &&
+                      patch({ buyerFeatures: toggleInList(data.buyerFeatures, item.id) })
+                    }
+                  />
+                ))}
+              </div>
+              <Field label="توضیحات بیشتر درباره تجربه خرید">
+                <textarea
+                  name="buyerNotes"
+                  className={`${fieldClass} min-h-24`}
+                  value={data.buyerNotes}
+                  disabled={locked}
+                  placeholder="مثلاً می‌خواهم مشتری قبل از پرداخت هزینه ارسال و نصب را ببیند"
+                  onChange={(event) => patch({ buyerNotes: event.target.value })}
+                />
+              </Field>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-6">
+              <p className="text-sm text-white/55">درگاه‌ها و روش‌های پرداختی که می‌خواهید فعال باشد:</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {PAYMENT_GATEWAYS.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.paymentGateways.includes(item.id)}
+                    title={item.label}
+                    onClick={() =>
+                      !locked &&
+                      patch({ paymentGateways: toggleInList(data.paymentGateways, item.id) })
+                    }
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-white/55">روش‌های ارسال برای مشتری:</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {DELIVERY_METHODS.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.deliveryMethods.includes(item.id)}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() =>
+                      !locked &&
+                      patch({ deliveryMethods: toggleInList(data.deliveryMethods, item.id) })
+                    }
+                  />
+                ))}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <OptionButton
+                  selected={data.installationOnSite}
+                  title="سفارش نصب در محل"
+                  subtitle="مشتری هنگام خرید نصب دیواری را انتخاب کند"
+                  onClick={() => !locked && patch({ installationOnSite: !data.installationOnSite })}
+                />
+                <OptionButton
+                  selected={data.warrantyDisplay}
+                  title="نمایش گارانتی"
+                  subtitle="گارانتی شرکتی و طلایی روی سایت"
+                  onClick={() => !locked && patch({ warrantyDisplay: !data.warrantyDisplay })}
+                />
+                <OptionButton
+                  selected={data.transparentCheckout}
+                  title="شفافیت قبل از پرداخت"
+                  subtitle="همه هزینه‌ها قبل از درگاه دیده شود"
+                  onClick={() => !locked && patch({ transparentCheckout: !data.transparentCheckout })}
+                />
+              </div>
+              <Field label="توضیحات خدمات و ارسال">
+                <textarea
+                  name="servicesNotes"
+                  className={`${fieldClass} min-h-24`}
+                  value={data.servicesNotes}
+                  disabled={locked}
+                  placeholder="مثلاً ارسال داخل منزل فقط برای ۶۵ اینچ به بالا"
+                  onChange={(event) => patch({ servicesNotes: event.target.value })}
+                />
+              </Field>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {ADMIN_FEATURES.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.adminFeatures.includes(item.id)}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() =>
+                      !locked &&
+                      patch({ adminFeatures: toggleInList(data.adminFeatures, item.id) })
+                    }
+                  />
+                ))}
+              </div>
+              <Field label="نیازهای دیگر در پنل مدیریت">
+                <textarea
+                  name="adminNotes"
+                  className={`${fieldClass} min-h-24`}
+                  value={data.adminNotes}
+                  disabled={locked}
+                  placeholder="مثلاً خروجی اکسل سفارش‌ها یا اتصال به پیامک"
+                  onChange={(event) => patch({ adminNotes: event.target.value })}
+                />
+              </Field>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="space-y-6">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {DESIGN_STYLES.map((item) => (
+                  <OptionButton
+                    key={item.id}
+                    selected={data.designStyle === item.id}
+                    title={item.label}
+                    subtitle={item.hint}
+                    onClick={() => !locked && patch({ designStyle: item.id })}
+                  />
+                ))}
+              </div>
+              <Field label="سایت‌های مرجع (اختیاری)">
+                <textarea
+                  name="referenceSites"
+                  className={`${fieldClass} min-h-20`}
+                  value={data.referenceSites}
+                  disabled={locked}
+                  placeholder="مثلاً دیجی‌کالا، تکنولایف، سامسونگ ایران"
+                  onChange={(event) => patch({ referenceSites: event.target.value })}
+                />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <OptionButton
+                  selected={data.hasLogo}
+                  title="لوگو آماده دارم"
+                  onClick={() => !locked && patch({ hasLogo: !data.hasLogo })}
+                />
+                <OptionButton
+                  selected={data.hasBrandGuide}
+                  title="راهنمای برند دارم"
+                  subtitle="رنگ، فونت یا هویت بصری"
+                  onClick={() => !locked && patch({ hasBrandGuide: !data.hasBrandGuide })}
+                />
+                <OptionButton
+                  selected={data.darkMode}
+                  title="تم تیره"
+                  onClick={() => !locked && patch({ darkMode: !data.darkMode })}
+                />
+                <OptionButton
+                  selected={data.mobileFirst}
+                  title="اولویت موبایل"
+                  subtitle="بیشتر مشتریان از گوشی می‌خرند"
+                  onClick={() => !locked && patch({ mobileFirst: !data.mobileFirst })}
+                />
+              </div>
+              <Field label="توضیحات طراحی">
+                <textarea
+                  name="designNotes"
+                  className={`${fieldClass} min-h-24`}
+                  value={data.designNotes}
+                  disabled={locked}
+                  placeholder="هر نکته‌ای که برای ظاهر سایت مهم است"
+                  onChange={(event) => patch({ designNotes: event.target.value })}
+                />
+              </Field>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-4 text-sm leading-7">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Info label="فروشگاه" value={data.storeName} />
+                <Info label="رابط" value={data.contactName} />
+                <Info label="نوع فعالیت" value={labelOf(data.businessType, BUSINESS_TYPES)} />
+                <Info label="شهر" value={data.city} />
+                <Info label="برندها" value={labelsFor(data.brandsToSell, BRANDS).join("، ")} />
+                <Info label="سایزها" value={labelsFor(data.sizeRanges, SIZE_RANGES).join("، ")} />
+                <Info
+                  label="تجربه خرید"
+                  value={labelsFor(data.buyerFeatures, BUYER_FEATURES).join("، ")}
+                />
+                <Info
+                  label="پرداخت"
+                  value={labelsFor(data.paymentGateways, PAYMENT_GATEWAYS).join("، ")}
+                />
+                <Info
+                  label="ارسال"
+                  value={labelsFor(data.deliveryMethods, DELIVERY_METHODS).join("، ")}
+                />
+                <Info
+                  label="پنل مدیریت"
+                  value={labelsFor(data.adminFeatures, ADMIN_FEATURES).join("، ")}
+                />
+                <Info label="طراحی" value={labelOf(data.designStyle, DESIGN_STYLES)} />
+                <Info label="پیشرفت" value={`${summary.completionPercent}%`} />
+              </div>
+              {data.storeDescription && (
+                <p className="rounded-2xl bg-white/5 p-4">{data.storeDescription}</p>
+              )}
+            </div>
+          )}
+
+          {error && <p className="mt-5 text-sm text-rose-400">{error}</p>}
+
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              disabled={step === 0}
+              onClick={() => {
+                setError("");
+                setStep((value) => Math.max(0, value - 1));
+              }}
+              className="rounded-2xl border border-white/15 px-5 py-3 text-sm disabled:opacity-30"
+            >
+              مرحله قبل
+            </button>
+            <div className="text-xs text-white/40">
+              {saving ? "در حال ذخیره..." : savedAt ? "پیش‌نویس ذخیره شد؛ بعداً می‌توانید ادامه دهید." : ""}
+            </div>
+            {step < lastStep ? (
+              <PrimaryButton type="button" onClick={goNext} disabled={locked}>
+                ادامه
+              </PrimaryButton>
+            ) : locked ? (
+              <PrimaryButton type="button" onClick={() => router.push("/form/success")}>
+                مشاهده خلاصه
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton type="button" onClick={submit}>
+                ثبت نهایی نیازمندی‌ها
+              </PrimaryButton>
+            )}
+          </div>
+        </form>
       </section>
       <div className="lg:sticky lg:top-24 lg:self-start">
-        <PriceBox data={data} quote={quote} />
+        <RequirementsSummary data={data} summary={summary} />
       </div>
     </div>
   );

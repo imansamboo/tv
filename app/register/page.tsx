@@ -42,9 +42,9 @@ export default function RegisterPage() {
       onSubmit={onSubmit}
       className="mx-auto max-w-md space-y-4 rounded-3xl border border-white/10 bg-[#101826] p-8"
     >
-      <h1 className="text-2xl font-black">ثبت‌نام مشتری</h1>
+      <h1 className="text-2xl font-black">ثبت‌نام صاحب فروشگاه</h1>
       <p className="text-sm text-white/60">
-        فقط ایمیل و رمز عبور کافی است؛ لینک تأیید ارسال نمی‌شود.
+        با ایمیل و رمز عبور حساب بسازید و نیازمندی‌های سایت فروش تلویزیون خود را ثبت کنید.
       </p>
       <Field label="نام و نام خانوادگی">
         <input

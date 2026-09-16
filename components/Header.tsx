@@ -48,7 +48,7 @@ export function Header() {
           <span>
             <span className="block text-sm font-bold">پارس‌تی‌وی</span>
             <span className="block text-[11px] text-white/50">
-              فروشگاه تخصصی تلویزیون
+              فرم نیازمندی‌های سایت فروشگاه
             </span>
           </span>
         </Link>
@@ -62,7 +62,7 @@ export function Header() {
             </Link>
           ) : (
             <Link className={linkClass("/form")} href="/form">
-              فرم درخواست
+              فرم نیازمندی‌ها
             </Link>
           )}
           {user ? (

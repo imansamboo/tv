@@ -1,32 +1,36 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { cn } from "@/lib/cn";
-import { IRAN_PHONE, normalizePhone } from "@/lib/format";
 
 type Msg = { from: "bot" | "user"; text: string };
 
 const FAQ: Array<{ test: RegExp; answer: string }> = [
   {
-    test: /سایز|اینچ|اندازه/,
+    test: /فرم|نیازمندی|سایت/,
     answer:
-      "برای فاصله حدود ۲ متر معمولاً ۵۵ اینچ و برای ۲٫۵ تا ۳ متر ۶۵ اینچ مناسب است. در فرم می‌توانید سایز را بزنید تا قیمت همان لحظه عوض شود.",
+      "این فرم برای صاحب فروشگاه است. شما می‌گویید سایت فروش تلویزیون چه امکاناتی داشته باشد؛ اطلاعات خرید مشتری یا شماره تماس گرفته نمی‌شود.",
   },
   {
-    test: /ارسال|حمل|پست/,
+    test: /کاتالوگ|برند|محصول/,
     answer:
-      "هزینه ارسال، کاور محافظ و بیمه حمل در مرحله آخر قبل از درگاه به مبلغ اضافه می‌شود تا هیچ هزینه پنهانی نباشد.",
+      "در مرحله کاتالوگ برندها، بازه سایز، حجم محصولات و نحوه ورود موجودی را انتخاب می‌کنید.",
   },
   {
-    test: /گارانتی|بیمه/,
+    test: /مشتری|خرید|پیکربندی/,
     answer:
-      "گارانتی شرکتی پیش‌فرض است. می‌توانید بیمه حمل و گارانتی طلایی ۱۲ یا ۲۴ ماهه را هم در مرحله خدمات اضافه کنید.",
+      "مرحله تجربه خرید مربوط به امکاناتی است که مشتری نهایی در سایت می‌بیند؛ مثل فیلتر، مقایسه، چت و پیکربندی مرحله‌ای.",
   },
   {
-    test: /نصب|دیوار/,
+    test: /پرداخت|ارسال|نصب|گارانتی/,
     answer:
-      "برای ۶۵ اینچ به بالا ارسال داخل منزل و نصب دیواری پیشنهاد می‌شود. براکت و جمع‌آوری تلویزیون قبلی هم قابل انتخاب است.",
+      "در مرحله پرداخت و خدمات، درگاه‌ها، روش ارسال، نصب در محل و شفافیت هزینه‌ها قبل از پرداخت را مشخص می‌کنید.",
+  },
+  {
+    test: /پنل|مدیریت|سفارش/,
+    answer:
+      "مرحله پنل مدیریت ابزارهایی را که خودتان برای مدیریت فروشگاه می‌خواهید پوشش می‌دهد؛ مثل سفارش، موجودی و چند کاربره.",
   },
 ];
 
@@ -34,65 +38,19 @@ export function ChatBot() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [phoneSaved, setPhoneSaved] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
     {
       from: "bot",
-      text: "سلام! من مشاور کمپین پارس‌تی‌وی هستم. برای ارسال پیشنهادهای ویژه و موجودی‌های خاص، شماره موبایل‌تان را بفرستید.",
+      text: "سلام! من راهنمای فرم نیازمندی‌های سایت هستم. اگر درباره مراحل فرم سؤالی دارید بپرسید.",
     },
   ]);
 
-  const placeholder = useMemo(
-    () => (phoneSaved ? "سؤال خود را بنویسید..." : "مثلاً ۰۹۱۲۱۲۳۴۵۶۷"),
-    [phoneSaved],
-  );
-
-  async function send(event: FormEvent) {
+  function send(event: FormEvent) {
     event.preventDefault();
     const text = input.trim();
-    if (!text || busy) return;
+    if (!text) return;
     setInput("");
     setMessages((current) => [...current, { from: "user", text }]);
-
-    const phone = normalizePhone(text);
-    if (!phoneSaved && IRAN_PHONE.test(phone)) {
-      setBusy(true);
-      const res = await fetch("/api/chat/lead", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, message: "opt-in chatbot" }),
-      });
-      const payload = await res.json();
-      setBusy(false);
-      if (!res.ok) {
-        setMessages((current) => [
-          ...current,
-          { from: "bot", text: payload.error || "ثبت شماره ممکن نشد." },
-        ]);
-        return;
-      }
-      setPhoneSaved(true);
-      setMessages((current) => [
-        ...current,
-        {
-          from: "bot",
-          text: `شماره ${phone} برای کمپین‌های بعدی ذخیره شد. اگر سؤالی درباره سایز، ارسال یا گارانتی دارید بپرسید.`,
-        },
-      ]);
-      return;
-    }
-
-    if (!phoneSaved) {
-      setMessages((current) => [
-        ...current,
-        {
-          from: "bot",
-          text: "اول شماره موبایل ایرانی‌تان را بفرستید تا برای کمپین ثبت شود؛ بعد می‌توانم راهنمایی کنم.",
-        },
-      ]);
-      return;
-    }
 
     const hit = FAQ.find((item) => item.test.test(text));
     setMessages((current) => [
@@ -101,7 +59,7 @@ export function ChatBot() {
         from: "bot",
         text:
           hit?.answer ||
-          "سؤالتان ثبت شد. همکاران فروش در ساعات کاری تماس می‌گیرند. برای شروع انتخاب تلویزیون از منوی «فرم درخواست» اقدام کنید.",
+          "برای ثبت نیازمندی‌های فروشگاه از منوی «فرم نیازمندی‌ها» استفاده کنید. هر مرحله را می‌توانید نیمه‌کاره ذخیره کنید.",
       },
     ]);
   }
@@ -113,10 +71,8 @@ export function ChatBot() {
       {open && (
         <div className="mb-3 flex h-[420px] w-[min(92vw,360px)] flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#101826] shadow-2xl">
           <div className="bg-amber-400 px-4 py-3 text-black">
-            <p className="font-bold">مشاور کمپین پارس‌تی‌وی</p>
-            <p className="text-xs opacity-80">
-              دریافت شماره برای اطلاع‌رسانی موجودی و تخفیف
-            </p>
+            <p className="font-bold">راهنمای فرم نیازمندی‌ها</p>
+            <p className="text-xs opacity-80">سؤالات درباره مراحل طراحی سایت فروشگاه</p>
           </div>
           <div className="flex-1 space-y-2 overflow-y-auto p-3 text-sm">
             {messages.map((msg, index) => (
@@ -137,13 +93,12 @@ export function ChatBot() {
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder={placeholder}
+              placeholder="سؤال خود را بنویسید..."
               className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-amber-400"
             />
             <button
               type="submit"
-              disabled={busy}
-              className="rounded-xl bg-amber-400 px-3 text-sm font-bold text-black disabled:opacity-50"
+              className="rounded-xl bg-amber-400 px-3 text-sm font-bold text-black"
             >
               ارسال
             </button>
@@ -154,10 +109,10 @@ export function ChatBot() {
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="flex items-center gap-2 rounded-full bg-amber-400 px-4 py-3 text-sm font-black text-black shadow-lg shadow-amber-400/30"
-        aria-label="باز کردن گفتگوی مشاور کمپین"
+        aria-label="باز کردن راهنمای فرم"
       >
         <span className="text-lg">{open ? "×" : "💬"}</span>
-        مشاور کمپین
+        راهنمای فرم
       </button>
     </div>
   );
