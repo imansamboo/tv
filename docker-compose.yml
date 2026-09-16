@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET to a long random string}
+    volumes:
+      - parstv-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  parstv-data:
