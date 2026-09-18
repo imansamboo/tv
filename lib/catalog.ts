@@ -132,12 +132,17 @@ export function labelOf(
   return catalog.find((item) => item.id === id)?.label ?? "—";
 }
 
+function formatOtherLabel(otherText: string) {
+  const text = otherText.trim();
+  return text ? `سایر (${text})` : OTHER_OPTION.label;
+}
+
 export function labelWithOther(
   id: string,
   catalog: ReadonlyArray<{ id: string; label: string }>,
   otherText: string,
 ) {
-  if (id === OTHER_OPTION.id && otherText.trim()) return otherText.trim();
+  if (id === OTHER_OPTION.id) return formatOtherLabel(otherText);
   return labelOf(id, catalog);
 }
 
@@ -147,7 +152,7 @@ export function labelsWithOther(
   otherText: string,
 ) {
   return ids.map((id) => {
-    if (id === OTHER_OPTION.id && otherText.trim()) return otherText.trim();
+    if (id === OTHER_OPTION.id) return formatOtherLabel(otherText);
     return labelOf(id, catalog);
   });
 }

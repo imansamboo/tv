@@ -1,14 +1,21 @@
-import {
-  BRANDS,
-  BUSINESS_TYPES,
-  DESIGN_STYLES,
-  EXISTING_WEBSITE,
-  labelOf,
-  labelWithOther,
-  labelsFor,
-} from "@/lib/catalog";
+import { BUSINESS_TYPES, EXISTING_WEBSITE, labelWithOther } from "@/lib/catalog";
 import type { RequirementData } from "@/lib/form";
 import type { RequirementSummary } from "@/lib/summary";
+
+function SummaryField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-xs tracking-wide text-amber-300">{label}</p>
+      <div className="mt-1 text-sm text-white/70">{children}</div>
+    </div>
+  );
+}
 
 export function RequirementsSummary({
   data,
@@ -22,40 +29,37 @@ export function RequirementsSummary({
   return (
     <aside className="rounded-3xl border border-white/10 bg-white/5 p-5">
       <p className="text-xs tracking-wide text-amber-300">خلاصه نیازمندی‌ها</p>
-      <h3 className="mt-1 text-lg font-bold">پیشرفت فرم</h3>
-      <p className="mt-3 text-3xl font-black text-amber-300">{summary.completionPercent}%</p>
-      {!compact && (
-        <dl className="mt-4 space-y-2 text-sm text-white/70">
-          <div className="flex justify-between gap-3">
-            <dt>امکانات انتخاب‌شده</dt>
-            <dd>{summary.featureCount}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt>فروشگاه</dt>
-            <dd>{data.storeName || "—"}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt>نوع فعالیت</dt>
-            <dd>{labelWithOther(data.businessType, BUSINESS_TYPES, data.businessTypeOther)}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt>برندها</dt>
-            <dd>{data.brandsToSell.length ? labelsFor(data.brandsToSell, BRANDS).length : 0}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt>سبک طراحی</dt>
-            <dd>{labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther)}</dd>
-          </div>
-        </dl>
-      )}
-      <div className="mt-4 space-y-1 text-xs text-white/45">
+      <div className="mt-4 space-y-4">
+        <SummaryField label="پیشرفت فرم">
+          <span className="text-3xl font-black text-amber-300">{summary.completionPercent}%</span>
+        </SummaryField>
+        {!compact && (
+          <>
+            <SummaryField label="امکانات انتخاب‌شده">{summary.featureCount}</SummaryField>
+            <SummaryField label="نوع فعالیت">
+              {labelWithOther(data.businessType, BUSINESS_TYPES, data.businessTypeOther) || "—"}
+            </SummaryField>
+          </>
+        )}
         {summary.highlights.length === 0 ? (
-          <p>با پر کردن مراحل، خلاصه نیازمندی‌های سایت اینجا نمایش داده می‌شود.</p>
+          <SummaryField label="وضعیت">
+            با پر کردن مراحل، خلاصه نیازمندی‌های سایت اینجا نمایش داده می‌شود.
+          </SummaryField>
         ) : (
-          summary.highlights.map((item) => <p key={item}>• {item}</p>)
+          summary.highlights.map((item) => (
+            <SummaryField key={item.label} label={item.label}>
+              {item.value}
+            </SummaryField>
+          ))
         )}
         {data.existingWebsite && (
-          <p className="pt-2">{labelOf(data.existingWebsite, EXISTING_WEBSITE)}</p>
+          <SummaryField label="وب‌سایت فعلی">
+            {labelWithOther(
+              data.existingWebsite,
+              EXISTING_WEBSITE,
+              data.existingWebsiteOther,
+            )}
+          </SummaryField>
         )}
       </div>
     </aside>

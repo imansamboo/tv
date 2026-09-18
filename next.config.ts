@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "bcryptjs"],
+  // Dev server only. `**.*` covers dotted hostnames; add loopback IPs explicitly.
+  allowedDevOrigins: ["**.*", "127.0.0.1", "[::1]"],
   async headers() {
     return [
       {

@@ -22,7 +22,7 @@ test("more completed steps increase completion and feature count", () => {
   const filled = summarizeRequirements(data);
   assert.ok(filled.completionPercent > empty.completionPercent);
   assert.ok(filled.featureCount > empty.featureCount);
-  assert.ok(filled.highlights.some((item) => item.includes("فریمان")));
+  assert.ok(filled.highlights.some((item) => item.value.includes("فریمان")));
 });
 
 test("description text does not affect completion percent", () => {
@@ -50,5 +50,5 @@ test("configurator selection appears in highlights", () => {
   data.storeName = "تی‌وی‌لند";
   data.buyerFeatures = ["configurator"];
   const summary = summarizeRequirements(data);
-  assert.ok(summary.highlights.some((item) => item.includes("پیکربندی")));
+  assert.ok(summary.highlights.some((item) => item.value.includes("پیکربندی")));
 });

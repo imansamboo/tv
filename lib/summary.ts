@@ -10,10 +10,15 @@ import {
 import type { RequirementData } from "./form";
 import { validateStep } from "./validate";
 
+export type SummaryItem = {
+  label: string;
+  value: string;
+};
+
 export type RequirementSummary = {
   featureCount: number;
   completionPercent: number;
-  highlights: string[];
+  highlights: SummaryItem[];
 };
 
 const FORM_INPUT_STEPS = 6;
@@ -33,40 +38,53 @@ export function summarizeRequirements(data: RequirementData): RequirementSummary
     Number(data.warrantyDisplay) +
     Number(data.transparentCheckout);
 
-  const highlights: string[] = [];
-  if (data.storeName) highlights.push(data.storeName);
+  const highlights: SummaryItem[] = [];
+  if (data.storeName) highlights.push({ label: "فروشگاه", value: data.storeName });
   if (data.brandsToSell.length) {
-    highlights.push(
-      labelsWithOther(data.brandsToSell, BRANDS, data.brandsOther).slice(0, 3).join("، "),
-    );
+    highlights.push({
+      label: "برندها",
+      value: labelsWithOther(data.brandsToSell, BRANDS, data.brandsOther).slice(0, 3).join("، "),
+    });
   }
   if (data.buyerFeatures.includes("configurator")) {
-    highlights.push("پیکربندی مرحله‌ای برای مشتری");
+    highlights.push({
+      label: "پیکربندی",
+      value: "پیکربندی مرحله‌ای برای مشتری",
+    });
   }
   if (data.designStyle) {
-    highlights.push(labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther));
+    highlights.push({
+      label: "سبک طراحی",
+      value: labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther),
+    });
   }
   if (data.paymentGateways.length) {
-    highlights.push(
-      labelsWithOther(data.paymentGateways, PAYMENT_GATEWAYS, data.paymentGatewaysOther).join(
+    highlights.push({
+      label: "درگاه پرداخت",
+      value: labelsWithOther(data.paymentGateways, PAYMENT_GATEWAYS, data.paymentGatewaysOther).join(
         " / ",
       ),
-    );
+    });
   }
   if (data.deliveryMethods.length) {
-    highlights.push(
-      labelsWithOther(data.deliveryMethods, DELIVERY_METHODS, data.deliveryMethodsOther).join(
+    highlights.push({
+      label: "روش ارسال",
+      value: labelsWithOther(data.deliveryMethods, DELIVERY_METHODS, data.deliveryMethodsOther).join(
         " / ",
       ),
-    );
+    });
   }
   if (data.sizeRanges.length) {
-    highlights.push(
-      labelsWithOther(data.sizeRanges, SIZE_RANGES, data.sizeRangesOther).join("، "),
-    );
+    highlights.push({
+      label: "سایز تلویزیون",
+      value: labelsWithOther(data.sizeRanges, SIZE_RANGES, data.sizeRangesOther).join("، "),
+    });
   }
   if (data.adminFeatures.length) {
-    highlights.push(`${data.adminFeatures.length} ابزار مدیریتی`);
+    highlights.push({
+      label: "مدیریت",
+      value: `${data.adminFeatures.length} ابزار مدیریتی`,
+    });
   }
 
   return {
