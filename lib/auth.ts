@@ -1,6 +1,6 @@
 import { jwtVerify, SignJWT } from "jose";
 
-export const SESSION_COOKIE = "parstv_session";
+export const SESSION_COOKIE = "fariman_session";
 
 export type SessionUser = {
   sub: string;
@@ -11,7 +11,7 @@ export type SessionUser = {
 
 function secret() {
   return new TextEncoder().encode(
-    process.env.AUTH_SECRET || "parstv-dev-secret-change-me-please",
+    process.env.AUTH_SECRET || "fariman-dev-secret-change-me-please",
   );
 }
 

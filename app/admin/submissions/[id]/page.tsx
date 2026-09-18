@@ -17,7 +17,8 @@ import {
   PRODUCT_VOLUME,
   SIZE_RANGES,
   labelOf,
-  labelsFor,
+  labelWithOther,
+  labelsWithOther,
 } from "@/lib/catalog";
 import { emptyRequirement, type RequirementData } from "@/lib/form";
 import { faDate } from "@/lib/format";
@@ -73,31 +74,76 @@ export default function SubmissionDetailPage({
               </span>
             </div>
             <dl className="grid gap-3 sm:grid-cols-2 text-sm">
-              <Item label="نوع فعالیت" value={labelOf(data.businessType, BUSINESS_TYPES)} />
+              <Item
+                label="نوع فعالیت"
+                value={labelWithOther(data.businessType, BUSINESS_TYPES, data.businessTypeOther)}
+              />
               <Item label="شهر" value={data.city} />
-              <Item label="وضعیت سایت" value={labelOf(data.existingWebsite, EXISTING_WEBSITE)} />
-              <Item label="حجم کاتالوگ" value={labelOf(data.productVolume, PRODUCT_VOLUME)} />
-              <Item label="ورود محصولات" value={labelOf(data.inventorySource, INVENTORY_SOURCE)} />
+              <Item
+                label="وضعیت سایت"
+                value={labelWithOther(
+                  data.existingWebsite,
+                  EXISTING_WEBSITE,
+                  data.existingWebsiteOther,
+                )}
+              />
+              <Item
+                label="حجم کاتالوگ"
+                value={labelWithOther(data.productVolume, PRODUCT_VOLUME, data.productVolumeOther)}
+              />
+              <Item
+                label="ورود محصولات"
+                value={labelWithOther(
+                  data.inventorySource,
+                  INVENTORY_SOURCE,
+                  data.inventorySourceOther,
+                )}
+              />
               <Item label="ثبت" value={faDate(row.submittedAt || row.updatedAt)} />
-              <Item label="برندها" value={labelsFor(data.brandsToSell, BRANDS).join("، ")} />
-              <Item label="سایزها" value={labelsFor(data.sizeRanges, SIZE_RANGES).join("، ")} />
+              <Item
+                label="برندها"
+                value={labelsWithOther(data.brandsToSell, BRANDS, data.brandsOther).join("، ")}
+              />
+              <Item
+                label="سایزها"
+                value={labelsWithOther(data.sizeRanges, SIZE_RANGES, data.sizeRangesOther).join("، ")}
+              />
               <Item
                 label="تجربه خرید"
-                value={labelsFor(data.buyerFeatures, BUYER_FEATURES).join("، ")}
+                value={labelsWithOther(
+                  data.buyerFeatures,
+                  BUYER_FEATURES,
+                  data.buyerFeaturesOther,
+                ).join("، ")}
               />
               <Item
                 label="پرداخت"
-                value={labelsFor(data.paymentGateways, PAYMENT_GATEWAYS).join("، ")}
+                value={labelsWithOther(
+                  data.paymentGateways,
+                  PAYMENT_GATEWAYS,
+                  data.paymentGatewaysOther,
+                ).join("، ")}
               />
               <Item
                 label="ارسال"
-                value={labelsFor(data.deliveryMethods, DELIVERY_METHODS).join("، ")}
+                value={labelsWithOther(
+                  data.deliveryMethods,
+                  DELIVERY_METHODS,
+                  data.deliveryMethodsOther,
+                ).join("، ")}
               />
               <Item
                 label="پنل مدیریت"
-                value={labelsFor(data.adminFeatures, ADMIN_FEATURES).join("، ")}
+                value={labelsWithOther(
+                  data.adminFeatures,
+                  ADMIN_FEATURES,
+                  data.adminFeaturesOther,
+                ).join("، ")}
               />
-              <Item label="طراحی" value={labelOf(data.designStyle, DESIGN_STYLES)} />
+              <Item
+                label="طراحی"
+                value={labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther)}
+              />
             </dl>
             {data.storeDescription && (
               <Block title="درباره فروشگاه" text={data.storeDescription} />

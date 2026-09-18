@@ -46,7 +46,7 @@ export function Header() {
             TV
           </span>
           <span>
-            <span className="block text-sm font-bold">پارس‌تی‌وی</span>
+            <span className="block text-sm font-bold">فریمان</span>
             <span className="block text-[11px] text-white/50">
               فرم نیازمندی‌های سایت فروشگاه
             </span>

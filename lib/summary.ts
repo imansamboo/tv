@@ -4,10 +4,11 @@ import {
   DESIGN_STYLES,
   PAYMENT_GATEWAYS,
   SIZE_RANGES,
-  labelsFor,
-  labelOf,
+  labelWithOther,
+  labelsWithOther,
 } from "./catalog";
 import type { RequirementData } from "./form";
+import { validateStep } from "./validate";
 
 export type RequirementSummary = {
   featureCount: number;
@@ -15,28 +16,14 @@ export type RequirementSummary = {
   highlights: string[];
 };
 
-const TRACKED_FIELDS: Array<(data: RequirementData) => boolean> = [
-  (data) => data.storeName.trim().length > 0,
-  (data) => data.businessType.length > 0,
-  (data) => data.brandsToSell.length > 0,
-  (data) => data.sizeRanges.length > 0,
-  (data) => data.productVolume.length > 0,
-  (data) => data.inventorySource.length > 0,
-  (data) => data.buyerFeatures.length > 0,
-  (data) => data.paymentGateways.length > 0,
-  (data) => data.deliveryMethods.length > 0,
-  (data) => data.adminFeatures.length > 0,
-  (data) => data.designStyle.length > 0,
-  (data) => data.installationOnSite,
-  (data) => data.warrantyDisplay,
-  (data) => data.transparentCheckout,
-  (data) => data.hasLogo,
-  (data) => data.hasBrandGuide,
-  (data) => data.mobileFirst,
-];
+const FORM_INPUT_STEPS = 6;
 
 export function summarizeRequirements(data: RequirementData): RequirementSummary {
-  const filled = TRACKED_FIELDS.filter((check) => check(data)).length;
+  let completedSteps = 0;
+  for (let step = 0; step < FORM_INPUT_STEPS; step += 1) {
+    if (validateStep(step, data) === null) completedSteps += 1;
+  }
+
   const featureCount =
     data.buyerFeatures.length +
     data.adminFeatures.length +
@@ -49,22 +36,34 @@ export function summarizeRequirements(data: RequirementData): RequirementSummary
   const highlights: string[] = [];
   if (data.storeName) highlights.push(data.storeName);
   if (data.brandsToSell.length) {
-    highlights.push(labelsFor(data.brandsToSell, BRANDS).slice(0, 3).join("، "));
+    highlights.push(
+      labelsWithOther(data.brandsToSell, BRANDS, data.brandsOther).slice(0, 3).join("، "),
+    );
   }
   if (data.buyerFeatures.includes("configurator")) {
     highlights.push("پیکربندی مرحله‌ای برای مشتری");
   }
   if (data.designStyle) {
-    highlights.push(labelOf(data.designStyle, DESIGN_STYLES));
+    highlights.push(labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther));
   }
   if (data.paymentGateways.length) {
-    highlights.push(labelsFor(data.paymentGateways, PAYMENT_GATEWAYS).join(" / "));
+    highlights.push(
+      labelsWithOther(data.paymentGateways, PAYMENT_GATEWAYS, data.paymentGatewaysOther).join(
+        " / ",
+      ),
+    );
   }
   if (data.deliveryMethods.length) {
-    highlights.push(labelsFor(data.deliveryMethods, DELIVERY_METHODS).join(" / "));
+    highlights.push(
+      labelsWithOther(data.deliveryMethods, DELIVERY_METHODS, data.deliveryMethodsOther).join(
+        " / ",
+      ),
+    );
   }
   if (data.sizeRanges.length) {
-    highlights.push(labelsFor(data.sizeRanges, SIZE_RANGES).join("، "));
+    highlights.push(
+      labelsWithOther(data.sizeRanges, SIZE_RANGES, data.sizeRangesOther).join("، "),
+    );
   }
   if (data.adminFeatures.length) {
     highlights.push(`${data.adminFeatures.length} ابزار مدیریتی`);
@@ -72,7 +71,7 @@ export function summarizeRequirements(data: RequirementData): RequirementSummary
 
   return {
     featureCount,
-    completionPercent: Math.round((filled / TRACKED_FIELDS.length) * 100),
+    completionPercent: Math.round((completedSteps / FORM_INPUT_STEPS) * 100),
     highlights: highlights.slice(0, 6),
   };
 }

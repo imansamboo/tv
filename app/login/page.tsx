@@ -37,7 +37,7 @@ function LoginForm() {
       onSubmit={onSubmit}
       className="mx-auto max-w-md space-y-4 rounded-3xl border border-white/10 bg-[#101826] p-8"
     >
-      <h1 className="text-2xl font-black">ورود به پارس‌تی‌وی</h1>
+      <h1 className="text-2xl font-black">ورود به فریمان</h1>
       <p className="text-sm text-white/60">
         با ایمیلی که ثبت کرده‌اید وارد شوید. تأیید ایمیل لازم نیست.
       </p>

@@ -1,3 +1,9 @@
+export const OTHER_OPTION = {
+  id: "other",
+  label: "سایر",
+  hint: "گزینه دلخواه خود را در کادر زیر بنویسید",
+} as const;
+
 export const CITIES = [
   { id: "تهران", label: "تهران" },
   { id: "کرج", label: "کرج" },
@@ -19,12 +25,14 @@ export const BUSINESS_TYPES = [
   { id: "physical", label: "فروشگاه حضوری", hint: "شعبه یا ویترین فیزیکی دارید" },
   { id: "online", label: "فقط آنلاین", hint: "الان هم بدون حضوری می‌فروشید" },
   { id: "both", label: "حضوری + آنلاین", hint: "می‌خواهید سایت مکمل فروشگاه باشد" },
+  OTHER_OPTION,
 ] as const;
 
 export const EXISTING_WEBSITE = [
   { id: "none", label: "سایت ندارم", hint: "از صفر می‌خواهیم بسازیم" },
   { id: "have", label: "سایت دارم", hint: "می‌خواهیم ارتقا یا جایگزین شود" },
   { id: "redesign", label: "نیاز به بازطراحی", hint: "سایت فعلی جواب نمی‌دهد" },
+  OTHER_OPTION,
 ] as const;
 
 export const BRANDS = [
@@ -35,7 +43,7 @@ export const BRANDS = [
   { id: "xvision", label: "ایکس‌ویژن" },
   { id: "snowa", label: "اسنوا" },
   { id: "hisense", label: "هایسنس" },
-  { id: "other", label: "برندهای دیگر" },
+  { id: "other", label: "برندهای دیگر", hint: OTHER_OPTION.hint },
 ] as const;
 
 export const SIZE_RANGES = [
@@ -44,12 +52,14 @@ export const SIZE_RANGES = [
   { id: "large", label: "۶۵ تا ۷۵ اینچ", hint: "پذیرایی و سینمای خانگی" },
   { id: "xlarge", label: "۸۵ اینچ و بالاتر", hint: "فضاهای بزرگ و لوکس" },
   { id: "all", label: "همه سایزها", hint: "کاتالوگ کامل می‌خواهم" },
+  OTHER_OPTION,
 ] as const;
 
 export const PRODUCT_VOLUME = [
   { id: "small", label: "کمتر از ۵۰ مدل", hint: "فروشگاه تخصصی و محدود" },
   { id: "medium", label: "۵۰ تا ۲۰۰ مدل", hint: "تنوع متوسط محصول" },
   { id: "large", label: "بیش از ۲۰۰ مدل", hint: "کاتالوگ گسترده مثل مارکت‌پلیس" },
+  OTHER_OPTION,
 ] as const;
 
 export const INVENTORY_SOURCE = [
@@ -57,6 +67,7 @@ export const INVENTORY_SOURCE = [
   { id: "excel", label: "اکسل / CSV", hint: "ورود گروهی از فایل" },
   { id: "api", label: "API تأمین‌کننده", hint: "اتصال به سیستم توزیع‌کننده" },
   { id: "erp", label: "نرم‌افزار حسابداری", hint: "یکپارچه با موجودی فعلی" },
+  OTHER_OPTION,
 ] as const;
 
 export const PAYMENT_GATEWAYS = [
@@ -65,6 +76,7 @@ export const PAYMENT_GATEWAYS = [
   { id: "snappay", label: "اسنپ‌پی" },
   { id: "card", label: "کارت‌به‌کارت + تأیید دستی" },
   { id: "installment", label: "اقساط / اعتباری" },
+  OTHER_OPTION,
 ] as const;
 
 export const DELIVERY_METHODS = [
@@ -72,6 +84,7 @@ export const DELIVERY_METHODS = [
   { id: "express", label: "ارسال سریع", hint: "بازه زمانی کوتاه‌تر" },
   { id: "inhome", label: "تحویل داخل منزل", hint: "مناسب تلویزیون‌های بزرگ" },
   { id: "pickup", label: "تحویل حضوری", hint: "مشتری از فروشگاه می‌برد" },
+  OTHER_OPTION,
 ] as const;
 
 export const DESIGN_STYLES = [
@@ -79,6 +92,7 @@ export const DESIGN_STYLES = [
   { id: "premium", label: "لوکس و حرفه‌ای", hint: "حس برند سطح بالا" },
   { id: "budget", label: "اقتصادی و پرمعامله", hint: "تخفیف و قیمت در مرکز" },
   { id: "custom", label: "طراحی سفارشی", hint: "الهام از سایت‌های مرجع خودم" },
+  OTHER_OPTION,
 ] as const;
 
 export const BUYER_FEATURES = [
@@ -90,6 +104,7 @@ export const BUYER_FEATURES = [
   { id: "chat", label: "چت با فروشگاه", hint: "پشتیبانی آنلاین مشتری" },
   { id: "reviews", label: "نظرات مشتریان", hint: "امتیاز و دیدگاه روی محصول" },
   { id: "blog", label: "مجله / راهنما", hint: "مقاله انتخاب تلویزیون و اخبار" },
+  OTHER_OPTION,
 ] as const;
 
 export const ADMIN_FEATURES = [
@@ -98,6 +113,7 @@ export const ADMIN_FEATURES = [
   { id: "inventory", label: "گزارش موجودی", hint: "کالاهای کم‌موجود و پرفروش" },
   { id: "sms", label: "پیامک کمپین", hint: "اطلاع‌رسانی تخفیف و موجودی" },
   { id: "staff", label: "چند کاربره", hint: "دسترسی جدا برای کارکنان" },
+  OTHER_OPTION,
 ] as const;
 
 export function labelsFor(
@@ -114,4 +130,24 @@ export function labelOf(
   catalog: ReadonlyArray<{ id: string; label: string }>,
 ) {
   return catalog.find((item) => item.id === id)?.label ?? "—";
+}
+
+export function labelWithOther(
+  id: string,
+  catalog: ReadonlyArray<{ id: string; label: string }>,
+  otherText: string,
+) {
+  if (id === OTHER_OPTION.id && otherText.trim()) return otherText.trim();
+  return labelOf(id, catalog);
+}
+
+export function labelsWithOther(
+  ids: string[],
+  catalog: ReadonlyArray<{ id: string; label: string }>,
+  otherText: string,
+) {
+  return ids.map((id) => {
+    if (id === OTHER_OPTION.id && otherText.trim()) return otherText.trim();
+    return labelOf(id, catalog);
+  });
 }
