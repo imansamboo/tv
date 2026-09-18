@@ -14,16 +14,20 @@ import {
   DESIGN_STYLES,
   EXISTING_WEBSITE,
   INVENTORY_SOURCE,
+  OTHER_OPTION,
   PAYMENT_GATEWAYS,
   PRODUCT_VOLUME,
   SIZE_RANGES,
-  labelOf,
-  labelsFor,
+  labelWithOther,
+  labelsWithOther,
 } from "@/lib/catalog";
 import { cn } from "@/lib/cn";
 import {
+  FORM_SECTION_HINTS,
   FORM_STEPS,
+  OTHER_ID,
   emptyRequirement,
+  hasOtherSelected,
   toggleInList,
   type RequirementData,
 } from "@/lib/form";
@@ -38,6 +42,28 @@ type FormPayload = {
   submittedAt: string | null;
   userName?: string;
 };
+
+const OTHER_TEXT_FIELDS = [
+  "businessTypeOther",
+  "existingWebsiteOther",
+  "brandsOther",
+  "sizeRangesOther",
+  "productVolumeOther",
+  "inventorySourceOther",
+  "buyerFeaturesOther",
+  "paymentGatewaysOther",
+  "deliveryMethodsOther",
+  "adminFeaturesOther",
+  "designStyleOther",
+  "contactName",
+  "storeName",
+  "storeDescription",
+  "buyerNotes",
+  "servicesNotes",
+  "adminNotes",
+  "referenceSites",
+  "designNotes",
+] as const;
 
 export function FormWizard() {
   const router = useRouter();
@@ -60,16 +86,7 @@ export function FormWizard() {
     if (!form) return current;
     const fd = new FormData(form);
     const next = { ...current };
-    for (const key of [
-      "contactName",
-      "storeName",
-      "storeDescription",
-      "buyerNotes",
-      "servicesNotes",
-      "adminNotes",
-      "referenceSites",
-      "designNotes",
-    ] as const) {
+    for (const key of OTHER_TEXT_FIELDS) {
       const value = fd.get(key);
       if (typeof value === "string") next[key] = value;
     }
@@ -194,8 +211,8 @@ export function FormWizard() {
           </div>
 
           {step === 0 && (
-            <div className="grid gap-4">
-              <Field label="نام رابط فروشگاه">
+            <div className="grid gap-6">
+              <Field label="نام رابط فروشگاه *" hint={FORM_SECTION_HINTS.contactName}>
                 <input
                   name="contactName"
                   className={fieldClass}
@@ -205,56 +222,74 @@ export function FormWizard() {
                   onChange={(event) => patch({ contactName: event.target.value })}
                 />
               </Field>
-              <Field label="نام فروشگاه">
+              <Field label="نام فروشگاه *" hint={FORM_SECTION_HINTS.storeName}>
                 <input
                   name="storeName"
                   className={fieldClass}
                   value={data.storeName}
                   disabled={locked}
-                  placeholder="مثلاً پارس الکترونیک"
+                  placeholder="مثلاً فریمان الکترونیک"
                   onChange={(event) => patch({ storeName: event.target.value })}
                 />
               </Field>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <SectionHelp text={FORM_SECTION_HINTS.businessType} />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {BUSINESS_TYPES.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.businessType === item.id}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() => !locked && patch({ businessType: item.id })}
                   />
                 ))}
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="شهر فعالیت">
-                  <select
-                    name="city"
-                    className={fieldClass}
-                    value={data.city}
-                    disabled={locked}
-                    onChange={(event) => patch({ city: event.target.value })}
-                  >
-                    {CITIES.map((city) => (
-                      <option key={city.id} value={city.id}>
-                        {city.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              {data.businessType === OTHER_ID && (
+                <OtherTextField
+                  name="businessTypeOther"
+                  value={data.businessTypeOther}
+                  disabled={locked}
+                  placeholder="نوع فعالیت خود را بنویسید"
+                  onChange={(value) => patch({ businessTypeOther: value })}
+                />
+              )}
+              <Field label="شهر فعالیت *" hint={FORM_SECTION_HINTS.city}>
+                <select
+                  name="city"
+                  className={fieldClass}
+                  value={data.city}
+                  disabled={locked}
+                  onChange={(event) => patch({ city: event.target.value })}
+                >
+                  {CITIES.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <SectionHelp text={FORM_SECTION_HINTS.existingWebsite} />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {EXISTING_WEBSITE.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.existingWebsite === item.id}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() => !locked && patch({ existingWebsite: item.id })}
                   />
                 ))}
               </div>
-              <Field label="توضیح کوتاه درباره فروشگاه">
+              {data.existingWebsite === OTHER_ID && (
+                <OtherTextField
+                  name="existingWebsiteOther"
+                  value={data.existingWebsiteOther}
+                  disabled={locked}
+                  placeholder="وضعیت سایت فعلی خود را توضیح دهید"
+                  onChange={(value) => patch({ existingWebsiteOther: value })}
+                />
+              )}
+              <Field label="توضیح کوتاه درباره فروشگاه" hint={FORM_SECTION_HINTS.storeDescription}>
                 <textarea
                   name="storeDescription"
                   className={`${fieldClass} min-h-24`}
@@ -269,13 +304,14 @@ export function FormWizard() {
 
           {step === 1 && (
             <div className="space-y-6">
-              <p className="text-sm text-white/55">برندهایی که می‌خواهید در سایت بفروشید:</p>
+              <SectionHelp text={FORM_SECTION_HINTS.brands} />
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {BRANDS.map((brand) => (
                   <OptionButton
                     key={brand.id}
                     selected={data.brandsToSell.includes(brand.id)}
                     title={brand.label}
+                    subtitle={"hint" in brand ? brand.hint : undefined}
                     onClick={() =>
                       !locked &&
                       patch({ brandsToSell: toggleInList(data.brandsToSell, brand.id) })
@@ -283,57 +319,93 @@ export function FormWizard() {
                   />
                 ))}
               </div>
-              <p className="text-sm text-white/55">بازه سایزهایی که می‌خواهید پوشش دهید:</p>
+              {hasOtherSelected(data.brandsToSell) && (
+                <OtherTextField
+                  name="brandsOther"
+                  value={data.brandsOther}
+                  disabled={locked}
+                  placeholder="برندهای دیگری که می‌فروشید"
+                  onChange={(value) => patch({ brandsOther: value })}
+                />
+              )}
+              <SectionHelp text={FORM_SECTION_HINTS.sizeRanges} />
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {SIZE_RANGES.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.sizeRanges.includes(item.id)}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() =>
                       !locked && patch({ sizeRanges: toggleInList(data.sizeRanges, item.id) })
                     }
                   />
                 ))}
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              {hasOtherSelected(data.sizeRanges) && (
+                <OtherTextField
+                  name="sizeRangesOther"
+                  value={data.sizeRangesOther}
+                  disabled={locked}
+                  placeholder="بازه سایز دلخواه خود را بنویسید"
+                  onChange={(value) => patch({ sizeRangesOther: value })}
+                />
+              )}
+              <SectionHelp text={FORM_SECTION_HINTS.productVolume} />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {PRODUCT_VOLUME.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.productVolume === item.id}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() => !locked && patch({ productVolume: item.id })}
                   />
                 ))}
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {data.productVolume === OTHER_ID && (
+                <OtherTextField
+                  name="productVolumeOther"
+                  value={data.productVolumeOther}
+                  disabled={locked}
+                  placeholder="حجم تقریبی کاتالوگ خود را بنویسید"
+                  onChange={(value) => patch({ productVolumeOther: value })}
+                />
+              )}
+              <SectionHelp text={FORM_SECTION_HINTS.inventorySource} />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {INVENTORY_SOURCE.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.inventorySource === item.id}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() => !locked && patch({ inventorySource: item.id })}
                   />
                 ))}
               </div>
+              {data.inventorySource === OTHER_ID && (
+                <OtherTextField
+                  name="inventorySourceOther"
+                  value={data.inventorySourceOther}
+                  disabled={locked}
+                  placeholder="نحوه ورود محصولات را توضیح دهید"
+                  onChange={(value) => patch({ inventorySourceOther: value })}
+                />
+              )}
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-6">
-              <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-7 text-amber-100">
-                این بخش برای مشتری نهایی سایت است؛ نه برای خود شما. چه تجربه‌ای می‌خواهید خریدار تلویزیون داشته باشد؟
-              </div>
+              <SectionHelp text={FORM_SECTION_HINTS.buyerFeatures} />
               <div className="grid gap-3 sm:grid-cols-2">
                 {BUYER_FEATURES.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.buyerFeatures.includes(item.id)}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() =>
                       !locked &&
                       patch({ buyerFeatures: toggleInList(data.buyerFeatures, item.id) })
@@ -341,7 +413,16 @@ export function FormWizard() {
                   />
                 ))}
               </div>
-              <Field label="توضیحات بیشتر درباره تجربه خرید">
+              {hasOtherSelected(data.buyerFeatures) && (
+                <OtherTextField
+                  name="buyerFeaturesOther"
+                  value={data.buyerFeaturesOther}
+                  disabled={locked}
+                  placeholder="امکانات دیگری که برای مشتری می‌خواهید"
+                  onChange={(value) => patch({ buyerFeaturesOther: value })}
+                />
+              )}
+              <Field label="توضیحات بیشتر درباره تجربه خرید" hint={FORM_SECTION_HINTS.buyerNotes}>
                 <textarea
                   name="buyerNotes"
                   className={`${fieldClass} min-h-24`}
@@ -356,13 +437,14 @@ export function FormWizard() {
 
           {step === 3 && (
             <div className="space-y-6">
-              <p className="text-sm text-white/55">درگاه‌ها و روش‌های پرداختی که می‌خواهید فعال باشد:</p>
+              <SectionHelp text={FORM_SECTION_HINTS.paymentGateways} />
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {PAYMENT_GATEWAYS.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.paymentGateways.includes(item.id)}
                     title={item.label}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() =>
                       !locked &&
                       patch({ paymentGateways: toggleInList(data.paymentGateways, item.id) })
@@ -370,14 +452,23 @@ export function FormWizard() {
                   />
                 ))}
               </div>
-              <p className="text-sm text-white/55">روش‌های ارسال برای مشتری:</p>
+              {hasOtherSelected(data.paymentGateways) && (
+                <OtherTextField
+                  name="paymentGatewaysOther"
+                  value={data.paymentGatewaysOther}
+                  disabled={locked}
+                  placeholder="روش پرداخت دیگری که می‌خواهید"
+                  onChange={(value) => patch({ paymentGatewaysOther: value })}
+                />
+              )}
+              <SectionHelp text={FORM_SECTION_HINTS.deliveryMethods} />
               <div className="grid gap-3 sm:grid-cols-2">
                 {DELIVERY_METHODS.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.deliveryMethods.includes(item.id)}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() =>
                       !locked &&
                       patch({ deliveryMethods: toggleInList(data.deliveryMethods, item.id) })
@@ -385,6 +476,16 @@ export function FormWizard() {
                   />
                 ))}
               </div>
+              {hasOtherSelected(data.deliveryMethods) && (
+                <OtherTextField
+                  name="deliveryMethodsOther"
+                  value={data.deliveryMethodsOther}
+                  disabled={locked}
+                  placeholder="روش ارسال دیگری که می‌خواهید"
+                  onChange={(value) => patch({ deliveryMethodsOther: value })}
+                />
+              )}
+              <SectionHelp text={FORM_SECTION_HINTS.serviceToggles} />
               <div className="grid gap-3 sm:grid-cols-3">
                 <OptionButton
                   selected={data.installationOnSite}
@@ -405,7 +506,7 @@ export function FormWizard() {
                   onClick={() => !locked && patch({ transparentCheckout: !data.transparentCheckout })}
                 />
               </div>
-              <Field label="توضیحات خدمات و ارسال">
+              <Field label="توضیحات خدمات و ارسال" hint={FORM_SECTION_HINTS.servicesNotes}>
                 <textarea
                   name="servicesNotes"
                   className={`${fieldClass} min-h-24`}
@@ -420,13 +521,14 @@ export function FormWizard() {
 
           {step === 4 && (
             <div className="space-y-6">
+              <SectionHelp text={FORM_SECTION_HINTS.adminFeatures} />
               <div className="grid gap-3 sm:grid-cols-2">
                 {ADMIN_FEATURES.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.adminFeatures.includes(item.id)}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() =>
                       !locked &&
                       patch({ adminFeatures: toggleInList(data.adminFeatures, item.id) })
@@ -434,7 +536,16 @@ export function FormWizard() {
                   />
                 ))}
               </div>
-              <Field label="نیازهای دیگر در پنل مدیریت">
+              {hasOtherSelected(data.adminFeatures) && (
+                <OtherTextField
+                  name="adminFeaturesOther"
+                  value={data.adminFeaturesOther}
+                  disabled={locked}
+                  placeholder="ابزار مدیریتی دیگری که نیاز دارید"
+                  onChange={(value) => patch({ adminFeaturesOther: value })}
+                />
+              )}
+              <Field label="نیازهای دیگر در پنل مدیریت" hint={FORM_SECTION_HINTS.adminNotes}>
                 <textarea
                   name="adminNotes"
                   className={`${fieldClass} min-h-24`}
@@ -449,18 +560,28 @@ export function FormWizard() {
 
           {step === 5 && (
             <div className="space-y-6">
+              <SectionHelp text={FORM_SECTION_HINTS.designStyle} />
               <div className="grid gap-3 sm:grid-cols-2">
                 {DESIGN_STYLES.map((item) => (
                   <OptionButton
                     key={item.id}
                     selected={data.designStyle === item.id}
                     title={item.label}
-                    subtitle={item.hint}
+                    subtitle={"hint" in item ? item.hint : undefined}
                     onClick={() => !locked && patch({ designStyle: item.id })}
                   />
                 ))}
               </div>
-              <Field label="سایت‌های مرجع (اختیاری)">
+              {data.designStyle === OTHER_ID && (
+                <OtherTextField
+                  name="designStyleOther"
+                  value={data.designStyleOther}
+                  disabled={locked}
+                  placeholder="سبک طراحی دلخواه خود را بنویسید"
+                  onChange={(value) => patch({ designStyleOther: value })}
+                />
+              )}
+              <Field label="سایت‌های مرجع" hint={FORM_SECTION_HINTS.referenceSites}>
                 <textarea
                   name="referenceSites"
                   className={`${fieldClass} min-h-20`}
@@ -470,6 +591,7 @@ export function FormWizard() {
                   onChange={(event) => patch({ referenceSites: event.target.value })}
                 />
               </Field>
+              <SectionHelp text={FORM_SECTION_HINTS.designAssets} />
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <OptionButton
                   selected={data.hasLogo}
@@ -494,7 +616,7 @@ export function FormWizard() {
                   onClick={() => !locked && patch({ mobileFirst: !data.mobileFirst })}
                 />
               </div>
-              <Field label="توضیحات طراحی">
+              <Field label="توضیحات طراحی" hint={FORM_SECTION_HINTS.designNotes}>
                 <textarea
                   name="designNotes"
                   className={`${fieldClass} min-h-24`}
@@ -512,27 +634,55 @@ export function FormWizard() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <Info label="فروشگاه" value={data.storeName} />
                 <Info label="رابط" value={data.contactName} />
-                <Info label="نوع فعالیت" value={labelOf(data.businessType, BUSINESS_TYPES)} />
+                <Info
+                  label="نوع فعالیت"
+                  value={labelWithOther(data.businessType, BUSINESS_TYPES, data.businessTypeOther)}
+                />
                 <Info label="شهر" value={data.city} />
-                <Info label="برندها" value={labelsFor(data.brandsToSell, BRANDS).join("، ")} />
-                <Info label="سایزها" value={labelsFor(data.sizeRanges, SIZE_RANGES).join("، ")} />
+                <Info
+                  label="برندها"
+                  value={labelsWithOther(data.brandsToSell, BRANDS, data.brandsOther).join("، ")}
+                />
+                <Info
+                  label="سایزها"
+                  value={labelsWithOther(data.sizeRanges, SIZE_RANGES, data.sizeRangesOther).join("، ")}
+                />
                 <Info
                   label="تجربه خرید"
-                  value={labelsFor(data.buyerFeatures, BUYER_FEATURES).join("، ")}
+                  value={labelsWithOther(
+                    data.buyerFeatures,
+                    BUYER_FEATURES,
+                    data.buyerFeaturesOther,
+                  ).join("، ")}
                 />
                 <Info
                   label="پرداخت"
-                  value={labelsFor(data.paymentGateways, PAYMENT_GATEWAYS).join("، ")}
+                  value={labelsWithOther(
+                    data.paymentGateways,
+                    PAYMENT_GATEWAYS,
+                    data.paymentGatewaysOther,
+                  ).join("، ")}
                 />
                 <Info
                   label="ارسال"
-                  value={labelsFor(data.deliveryMethods, DELIVERY_METHODS).join("، ")}
+                  value={labelsWithOther(
+                    data.deliveryMethods,
+                    DELIVERY_METHODS,
+                    data.deliveryMethodsOther,
+                  ).join("، ")}
                 />
                 <Info
                   label="پنل مدیریت"
-                  value={labelsFor(data.adminFeatures, ADMIN_FEATURES).join("، ")}
+                  value={labelsWithOther(
+                    data.adminFeatures,
+                    ADMIN_FEATURES,
+                    data.adminFeaturesOther,
+                  ).join("، ")}
                 />
-                <Info label="طراحی" value={labelOf(data.designStyle, DESIGN_STYLES)} />
+                <Info
+                  label="طراحی"
+                  value={labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther)}
+                />
                 <Info label="پیشرفت" value={`${summary.completionPercent}%`} />
               </div>
               {data.storeDescription && (
@@ -578,6 +728,37 @@ export function FormWizard() {
         <RequirementsSummary data={data} summary={summary} />
       </div>
     </div>
+  );
+}
+
+function SectionHelp({ text }: { text: string }) {
+  return <p className="text-sm leading-7 text-white/55">{text}</p>;
+}
+
+function OtherTextField({
+  name,
+  value,
+  disabled,
+  placeholder,
+  onChange,
+}: {
+  name: string;
+  value: string;
+  disabled: boolean;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Field label={`${OTHER_OPTION.label} *`} hint={OTHER_OPTION.hint}>
+      <input
+        name={name}
+        className={fieldClass}
+        value={value}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </Field>
   );
 }
 

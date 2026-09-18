@@ -4,6 +4,7 @@ import {
   DESIGN_STYLES,
   EXISTING_WEBSITE,
   labelOf,
+  labelWithOther,
   labelsFor,
 } from "@/lib/catalog";
 import type { RequirementData } from "@/lib/form";
@@ -35,7 +36,7 @@ export function RequirementsSummary({
           </div>
           <div className="flex justify-between gap-3">
             <dt>نوع فعالیت</dt>
-            <dd>{labelOf(data.businessType, BUSINESS_TYPES)}</dd>
+            <dd>{labelWithOther(data.businessType, BUSINESS_TYPES, data.businessTypeOther)}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt>برندها</dt>
@@ -43,7 +44,7 @@ export function RequirementsSummary({
           </div>
           <div className="flex justify-between gap-3">
             <dt>سبک طراحی</dt>
-            <dd>{labelOf(data.designStyle, DESIGN_STYLES)}</dd>
+            <dd>{labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther)}</dd>
           </div>
         </dl>
       )}
