@@ -10,19 +10,27 @@ test("more completed steps increase completion and feature count", () => {
   data.storeName = "فریمان الکترونیک";
   data.businessType = "both";
   data.existingWebsite = "none";
-  data.brandsToSell = ["samsung", "lg"];
+  data.brandsToSell = ["samsung", "lg", "sony", "tcl"];
   data.sizeRanges = ["medium", "large"];
   data.productVolume = "medium";
   data.inventorySource = "manual";
   data.buyerFeatures = ["configurator", "filters"];
   data.paymentGateways = ["zarinpal"];
   data.deliveryMethods = ["inhome"];
-  data.adminFeatures = ["orders"];
+  data.adminFeatures = ["orders", "inventory"];
   data.designStyle = "modern";
   const filled = summarizeRequirements(data);
   assert.ok(filled.completionPercent > empty.completionPercent);
   assert.ok(filled.featureCount > empty.featureCount);
   assert.ok(filled.highlights.some((item) => item.value.includes("فریمان")));
+  const brands = filled.highlights.find((item) => item.label === "برندها");
+  assert.ok(brands?.value.includes("سونی"));
+  assert.ok(brands?.value.includes("تی‌سی‌ال"));
+  const admin = filled.highlights.find((item) => item.label === "پنل مدیریت");
+  assert.ok(admin?.value.includes("مدیریت سفارش"));
+  assert.ok(admin?.value.includes("گزارش موجودی"));
+  const volume = filled.highlights.find((item) => item.label === "تعداد مدل");
+  assert.ok(volume?.value.includes("۵۰"));
 });
 
 test("description text does not affect completion percent", () => {
@@ -45,10 +53,12 @@ test("description text does not affect completion percent", () => {
   assert.equal(withNotes.completionPercent, withoutNotes.completionPercent);
 });
 
-test("configurator selection appears in highlights", () => {
+test("buyer features appear in highlights", () => {
   const data = emptyRequirement();
   data.storeName = "تی‌وی‌لند";
-  data.buyerFeatures = ["configurator"];
+  data.buyerFeatures = ["configurator", "comparison"];
   const summary = summarizeRequirements(data);
-  assert.ok(summary.highlights.some((item) => item.value.includes("پیکربندی")));
+  const buyer = summary.highlights.find((item) => item.label === "تجربه خرید");
+  assert.ok(buyer?.value.includes("پیکربندی"));
+  assert.ok(buyer?.value.includes("مقایسه"));
 });

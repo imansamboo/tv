@@ -3,7 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RequirementsSummary } from "@/components/RequirementsSummary";
-import { Field, fieldClass, OptionButton, PrimaryButton } from "@/components/ui";
+import { ReviewPanel } from "@/components/form/ReviewPanel";
+import {
+  Field,
+  fieldClass,
+  optionGridClass,
+  OptionButton,
+  PrimaryButton,
+} from "@/components/ui";
 import {
   ADMIN_FEATURES,
   BRANDS,
@@ -18,14 +25,14 @@ import {
   PAYMENT_GATEWAYS,
   PRODUCT_VOLUME,
   SIZE_RANGES,
-  labelWithOther,
-  labelsWithOther,
 } from "@/lib/catalog";
 import { cn } from "@/lib/cn";
 import {
   FORM_SECTION_HINTS,
   FORM_STEPS,
+  MULTI_SELECT_HINT,
   OTHER_ID,
+  SINGLE_SELECT_HINT,
   emptyRequirement,
   hasOtherSelected,
   toggleInList,
@@ -102,7 +109,8 @@ export function FormWizard() {
       .then((res) => res.json())
       .then((payload: FormPayload) => {
         setStatus(payload.status);
-        setStep(payload.currentStep ?? 0);
+        const submitted = payload.status === "SUBMITTED";
+        setStep(submitted ? FORM_STEPS.length - 1 : (payload.currentStep ?? 0));
         const incoming = payload.data;
         if (!incoming.contactName && payload.userName) {
           incoming.contactName = payload.userName;
@@ -166,7 +174,10 @@ export function FormWizard() {
       if (typeof payload.step === "number") setStep(payload.step);
       return;
     }
-    router.push("/form/success");
+    setStatus("SUBMITTED");
+    setStep(lastStep);
+    if (payload.submittedAt) setSubmittedAt(payload.submittedAt);
+    router.refresh();
   }
 
   if (loading) {
@@ -176,27 +187,29 @@ export function FormWizard() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <section className="rounded-3xl border border-white/10 bg-[#101826]/80 p-5 sm:p-8">
-        <ol className="mb-8 grid grid-cols-7 gap-2">
-          {FORM_STEPS.map((item, index) => (
-            <li key={item.title}>
-              <button
-                type="button"
-                onClick={() => !locked && setStep(index)}
-                className={cn(
-                  "flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[11px]",
-                  index === step
-                    ? "bg-amber-400 text-black"
-                    : index < step
-                      ? "bg-white/10 text-white"
-                      : "text-white/35",
-                )}
-              >
-                <span className="font-bold">{index + 1}</span>
-                <span className="hidden sm:block">{item.title}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
+        {!locked && (
+          <ol className="mb-8 grid grid-cols-7 gap-2">
+            {FORM_STEPS.map((item, index) => (
+              <li key={item.title}>
+                <button
+                  type="button"
+                  onClick={() => setStep(index)}
+                  className={cn(
+                    "flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[11px]",
+                    index === step
+                      ? "bg-amber-400 text-black"
+                      : index < step
+                        ? "bg-white/10 text-white"
+                        : "text-white/35",
+                  )}
+                >
+                  <span className="font-bold">{index + 1}</span>
+                  <span className="hidden sm:block">{item.title}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
 
         {locked && (
           <div className="mb-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
@@ -232,8 +245,12 @@ export function FormWizard() {
                   onChange={(event) => patch({ storeName: event.target.value })}
                 />
               </Field>
-              <SectionHelp text={FORM_SECTION_HINTS.businessType} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <OptionSection
+                label="نوع فعالیت *"
+                hint={FORM_SECTION_HINTS.businessType}
+                selectionHint={SINGLE_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {BUSINESS_TYPES.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -268,8 +285,12 @@ export function FormWizard() {
                   ))}
                 </select>
               </Field>
-              <SectionHelp text={FORM_SECTION_HINTS.existingWebsite} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <OptionSection
+                label="وضعیت وب‌سایت فعلی *"
+                hint={FORM_SECTION_HINTS.existingWebsite}
+                selectionHint={SINGLE_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {EXISTING_WEBSITE.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -304,8 +325,12 @@ export function FormWizard() {
 
           {step === 1 && (
             <div className="space-y-6">
-              <SectionHelp text={FORM_SECTION_HINTS.brands} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <OptionSection
+                label="برندها *"
+                hint={FORM_SECTION_HINTS.brands}
+                selectionHint={MULTI_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {BRANDS.map((brand) => (
                   <OptionButton
                     key={brand.id}
@@ -328,8 +353,12 @@ export function FormWizard() {
                   onChange={(value) => patch({ brandsOther: value })}
                 />
               )}
-              <SectionHelp text={FORM_SECTION_HINTS.sizeRanges} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <OptionSection
+                label="بازه سایز *"
+                hint={FORM_SECTION_HINTS.sizeRanges}
+                selectionHint={MULTI_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {SIZE_RANGES.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -351,8 +380,12 @@ export function FormWizard() {
                   onChange={(value) => patch({ sizeRangesOther: value })}
                 />
               )}
-              <SectionHelp text={FORM_SECTION_HINTS.productVolume} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <OptionSection
+                label="تعداد مدل *"
+                hint={FORM_SECTION_HINTS.productVolume}
+                selectionHint={SINGLE_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {PRODUCT_VOLUME.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -372,8 +405,12 @@ export function FormWizard() {
                   onChange={(value) => patch({ productVolumeOther: value })}
                 />
               )}
-              <SectionHelp text={FORM_SECTION_HINTS.inventorySource} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <OptionSection
+                label="ورود محصولات *"
+                hint={FORM_SECTION_HINTS.inventorySource}
+                selectionHint={SINGLE_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {INVENTORY_SOURCE.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -398,8 +435,12 @@ export function FormWizard() {
 
           {step === 2 && (
             <div className="space-y-6">
-              <SectionHelp text={FORM_SECTION_HINTS.buyerFeatures} />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <OptionSection
+                label="امکانات تجربه خرید *"
+                hint={FORM_SECTION_HINTS.buyerFeatures}
+                selectionHint={MULTI_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {BUYER_FEATURES.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -437,8 +478,12 @@ export function FormWizard() {
 
           {step === 3 && (
             <div className="space-y-6">
-              <SectionHelp text={FORM_SECTION_HINTS.paymentGateways} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <OptionSection
+                label="درگاه پرداخت *"
+                hint={FORM_SECTION_HINTS.paymentGateways}
+                selectionHint={MULTI_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {PAYMENT_GATEWAYS.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -461,8 +506,12 @@ export function FormWizard() {
                   onChange={(value) => patch({ paymentGatewaysOther: value })}
                 />
               )}
-              <SectionHelp text={FORM_SECTION_HINTS.deliveryMethods} />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <OptionSection
+                label="روش ارسال *"
+                hint={FORM_SECTION_HINTS.deliveryMethods}
+                selectionHint={MULTI_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {DELIVERY_METHODS.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -485,8 +534,12 @@ export function FormWizard() {
                   onChange={(value) => patch({ deliveryMethodsOther: value })}
                 />
               )}
-              <SectionHelp text={FORM_SECTION_HINTS.serviceToggles} />
-              <div className="grid gap-3 sm:grid-cols-3">
+              <OptionSection
+                label="خدمات هنگام خرید"
+                hint={FORM_SECTION_HINTS.serviceToggles}
+                selectionHint={MULTI_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 <OptionButton
                   selected={data.installationOnSite}
                   title="سفارش نصب در محل"
@@ -521,8 +574,12 @@ export function FormWizard() {
 
           {step === 4 && (
             <div className="space-y-6">
-              <SectionHelp text={FORM_SECTION_HINTS.adminFeatures} />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <OptionSection
+                label="ابزارهای پنل مدیریت *"
+                hint={FORM_SECTION_HINTS.adminFeatures}
+                selectionHint={MULTI_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {ADMIN_FEATURES.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -560,8 +617,12 @@ export function FormWizard() {
 
           {step === 5 && (
             <div className="space-y-6">
-              <SectionHelp text={FORM_SECTION_HINTS.designStyle} />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <OptionSection
+                label="سبک طراحی *"
+                hint={FORM_SECTION_HINTS.designStyle}
+                selectionHint={SINGLE_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 {DESIGN_STYLES.map((item) => (
                   <OptionButton
                     key={item.id}
@@ -591,8 +652,12 @@ export function FormWizard() {
                   onChange={(event) => patch({ referenceSites: event.target.value })}
                 />
               </Field>
-              <SectionHelp text={FORM_SECTION_HINTS.designAssets} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <OptionSection
+                label="دارایی‌های برند"
+                hint={FORM_SECTION_HINTS.designAssets}
+                selectionHint={MULTI_SELECT_HINT}
+              />
+              <div className={optionGridClass}>
                 <OptionButton
                   selected={data.hasLogo}
                   title="لوگو آماده دارم"
@@ -630,98 +695,42 @@ export function FormWizard() {
           )}
 
           {step === 6 && (
-            <div className="space-y-4 text-sm leading-7">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Info label="فروشگاه" value={data.storeName} />
-                <Info label="رابط" value={data.contactName} />
-                <Info
-                  label="نوع فعالیت"
-                  value={labelWithOther(data.businessType, BUSINESS_TYPES, data.businessTypeOther)}
-                />
-                <Info label="شهر" value={data.city} />
-                <Info
-                  label="برندها"
-                  value={labelsWithOther(data.brandsToSell, BRANDS, data.brandsOther).join("، ")}
-                />
-                <Info
-                  label="سایزها"
-                  value={labelsWithOther(data.sizeRanges, SIZE_RANGES, data.sizeRangesOther).join("، ")}
-                />
-                <Info
-                  label="تجربه خرید"
-                  value={labelsWithOther(
-                    data.buyerFeatures,
-                    BUYER_FEATURES,
-                    data.buyerFeaturesOther,
-                  ).join("، ")}
-                />
-                <Info
-                  label="پرداخت"
-                  value={labelsWithOther(
-                    data.paymentGateways,
-                    PAYMENT_GATEWAYS,
-                    data.paymentGatewaysOther,
-                  ).join("، ")}
-                />
-                <Info
-                  label="ارسال"
-                  value={labelsWithOther(
-                    data.deliveryMethods,
-                    DELIVERY_METHODS,
-                    data.deliveryMethodsOther,
-                  ).join("، ")}
-                />
-                <Info
-                  label="پنل مدیریت"
-                  value={labelsWithOther(
-                    data.adminFeatures,
-                    ADMIN_FEATURES,
-                    data.adminFeaturesOther,
-                  ).join("، ")}
-                />
-                <Info
-                  label="طراحی"
-                  value={labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther)}
-                />
-                <Info label="پیشرفت" value={`${summary.completionPercent}%`} />
-              </div>
-              {data.storeDescription && (
-                <p className="rounded-2xl bg-white/5 p-4">{data.storeDescription}</p>
-              )}
-            </div>
+            <ReviewPanel data={data} completionPercent={summary.completionPercent} />
           )}
 
           {error && <p className="mt-5 text-sm text-rose-400">{error}</p>}
 
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              disabled={step === 0}
-              onClick={() => {
-                setError("");
-                setStep((value) => Math.max(0, value - 1));
-              }}
-              className="rounded-2xl border border-white/15 px-5 py-3 text-sm disabled:opacity-30"
-            >
-              مرحله قبل
-            </button>
-            <div className="text-xs text-white/40">
-              {saving ? "در حال ذخیره..." : savedAt ? "پیش‌نویس ذخیره شد؛ بعداً می‌توانید ادامه دهید." : ""}
+          {!locked && (
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                disabled={step === 0}
+                onClick={() => {
+                  setError("");
+                  setStep((value) => Math.max(0, value - 1));
+                }}
+                className="rounded-2xl border border-white/15 px-5 py-3 text-sm disabled:opacity-30"
+              >
+                مرحله قبل
+              </button>
+              <div className="text-xs text-white/40">
+                {saving
+                  ? "در حال ذخیره..."
+                  : savedAt
+                    ? "پیش‌نویس ذخیره شد؛ بعداً می‌توانید ادامه دهید."
+                    : ""}
+              </div>
+              {step < lastStep ? (
+                <PrimaryButton type="button" onClick={goNext}>
+                  ادامه
+                </PrimaryButton>
+              ) : (
+                <PrimaryButton type="button" onClick={submit}>
+                  ثبت نهایی نیازمندی‌ها
+                </PrimaryButton>
+              )}
             </div>
-            {step < lastStep ? (
-              <PrimaryButton type="button" onClick={goNext} disabled={locked}>
-                ادامه
-              </PrimaryButton>
-            ) : locked ? (
-              <PrimaryButton type="button" onClick={() => router.push("/form/success")}>
-                مشاهده خلاصه
-              </PrimaryButton>
-            ) : (
-              <PrimaryButton type="button" onClick={submit}>
-                ثبت نهایی نیازمندی‌ها
-              </PrimaryButton>
-            )}
-          </div>
+          )}
         </form>
       </section>
       <div className="lg:sticky lg:top-24 lg:self-start">
@@ -731,8 +740,24 @@ export function FormWizard() {
   );
 }
 
-function SectionHelp({ text }: { text: string }) {
-  return <p className="text-sm leading-7 text-white/55">{text}</p>;
+function OptionSection({
+  label,
+  hint,
+  selectionHint,
+}: {
+  label: string;
+  hint: string;
+  selectionHint: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-sm font-medium text-white/85">
+        {label}
+        <span className="font-normal text-white/45"> ({hint})</span>
+      </p>
+      <p className="text-xs text-white/40">{selectionHint}</p>
+    </div>
+  );
 }
 
 function OtherTextField({
@@ -762,11 +787,3 @@ function OtherTextField({
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-white/5 p-3">
-      <p className="text-xs text-white/45">{label}</p>
-      <p className="mt-1 font-medium">{value || "—"}</p>
-    </div>
-  );
-}

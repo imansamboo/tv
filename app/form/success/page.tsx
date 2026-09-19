@@ -27,7 +27,8 @@ export default function SuccessPage() {
         <p className="text-emerald-300">نیازمندی‌های شما ثبت شد</p>
         <h1 className="mt-2 text-3xl font-black">فرم قفل شد و آماده بررسی است</h1>
         <p className="mt-4 leading-8 text-white/70">
-          تیم طراحی سایت نیازمندی‌های فروشگاه شما را دریافت کرد. اگر دوباره وارد شوید همان پاسخ‌ها را به‌صورت فقط‌خواندنی می‌بینید.
+          تیم طراحی سایت نیازمندی‌های فروشگاه شما را دریافت کرد. اگر دوباره وارد شوید همان پاسخ‌ها را
+          به‌صورت فقط‌خواندنی می‌بینید.
         </p>
         {!locked && (
           <p className="mt-4 text-amber-200">
@@ -38,12 +39,14 @@ export default function SuccessPage() {
             ادامه دهید.
           </p>
         )}
-        <Link
-          href="/form"
-          className="mt-6 inline-block rounded-2xl bg-amber-400 px-5 py-3 font-bold text-black"
-        >
-          مشاهده خلاصه ذخیره‌شده
-        </Link>
+        {locked && (
+          <Link
+            href="/form"
+            className="mt-6 inline-block rounded-2xl bg-amber-400 px-5 py-3 font-bold text-black"
+          >
+            مشاهده بازبینی
+          </Link>
+        )}
       </section>
       <RequirementsSummary data={data} summary={summary} />
     </div>
