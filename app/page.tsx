@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HomeActions } from "@/components/HomeActions";
 
 const highlights = [
   {
@@ -37,18 +37,7 @@ export default function Home() {
             این فرم برای صاحب فروشگاه است، نه مشتری. شما می‌گویید کاتالوگ، تجربه خرید، پرداخت، ارسال و پنل مدیریت چطور باشد؛ ما بر اساس آن سایت فروش تلویزیون را طراحی می‌کنیم.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/register"
-              className="rounded-2xl bg-amber-400 px-6 py-3 font-bold text-black"
-            >
-              ثبت‌نام و شروع فرم
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-2xl border border-white/15 px-6 py-3 font-bold"
-            >
-              ورود به حساب
-            </Link>
+            <HomeActions />
           </div>
         </div>
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">

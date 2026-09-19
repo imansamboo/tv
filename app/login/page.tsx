@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
 
 function LoginForm() {
@@ -12,6 +12,18 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((payload) => {
+        if (payload.user) {
+          router.replace(search.get("next") || (payload.user.role === "ADMIN" ? "/admin" : "/form"));
+        }
+      })
+      .finally(() => setCheckingSession(false));
+  }, [router, search]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -30,6 +42,10 @@ function LoginForm() {
     }
     router.push(search.get("next") || payload.next || "/form");
     router.refresh();
+  }
+
+  if (checkingSession) {
+    return <p className="py-20 text-center text-white/60">در حال بررسی وضعیت ورود...</p>;
   }
 
   return (

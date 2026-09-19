@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
 
 export default function RegisterPage() {
@@ -13,6 +13,16 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((payload) => {
+        if (payload.user) router.replace("/form");
+      })
+      .finally(() => setCheckingSession(false));
+  }, [router]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -35,6 +45,10 @@ export default function RegisterPage() {
     }
     router.push("/form");
     router.refresh();
+  }
+
+  if (checkingSession) {
+    return <p className="py-20 text-center text-white/60">در حال بررسی وضعیت ورود...</p>;
   }
 
   return (
