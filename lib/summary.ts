@@ -81,10 +81,14 @@ export function summarizeRequirements(data: RequirementData): RequirementSummary
       value: labelWithOther(data.productVolume, PRODUCT_VOLUME, data.productVolumeOther),
     });
   }
-  if (data.inventorySource) {
+  if (data.inventorySources.length) {
     highlights.push({
       label: "ورود محصولات",
-      value: labelWithOther(data.inventorySource, INVENTORY_SOURCE, data.inventorySourceOther),
+      value: labelsWithOther(
+        data.inventorySources,
+        INVENTORY_SOURCE,
+        data.inventorySourceOther,
+      ).join("، "),
     });
   }
   if (data.buyerFeatures.length) {

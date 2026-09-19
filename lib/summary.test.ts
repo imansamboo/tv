@@ -13,7 +13,7 @@ test("more completed steps increase completion and feature count", () => {
   data.brandsToSell = ["samsung", "lg", "sony", "tcl"];
   data.sizeRanges = ["medium", "large"];
   data.productVolume = "medium";
-  data.inventorySource = "manual";
+  data.inventorySources = ["manual"];
   data.buyerFeatures = ["configurator", "filters"];
   data.paymentGateways = ["zarinpal"];
   data.deliveryMethods = ["inhome"];
@@ -51,6 +51,12 @@ test("description text does not affect completion percent", () => {
   });
 
   assert.equal(withNotes.completionPercent, withoutNotes.completionPercent);
+});
+
+test("empty form does not show default service or design highlights", () => {
+  const summary = summarizeRequirements(emptyRequirement());
+  assert.ok(!summary.highlights.some((item) => item.label === "خدمات خرید"));
+  assert.ok(!summary.highlights.some((item) => item.label === "دارایی‌های طراحی"));
 });
 
 test("buyer features appear in highlights", () => {

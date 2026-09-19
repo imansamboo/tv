@@ -408,20 +408,25 @@ export function FormWizard() {
               <OptionSection
                 label="ورود محصولات *"
                 hint={FORM_SECTION_HINTS.inventorySource}
-                selectionHint={SINGLE_SELECT_HINT}
+                selectionHint={MULTI_SELECT_HINT}
               />
               <div className={optionGridClass}>
                 {INVENTORY_SOURCE.map((item) => (
                   <OptionButton
                     key={item.id}
-                    selected={data.inventorySource === item.id}
+                    selected={data.inventorySources.includes(item.id)}
                     title={item.label}
                     subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() => !locked && patch({ inventorySource: item.id })}
+                    onClick={() =>
+                      !locked &&
+                      patch({
+                        inventorySources: toggleInList(data.inventorySources, item.id),
+                      })
+                    }
                   />
                 ))}
               </div>
-              {data.inventorySource === OTHER_ID && (
+              {hasOtherSelected(data.inventorySources) && (
                 <OtherTextField
                   name="inventorySourceOther"
                   value={data.inventorySourceOther}

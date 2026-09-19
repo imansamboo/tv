@@ -3,23 +3,8 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
+import { ReviewPanel } from "@/components/form/ReviewPanel";
 import { RequirementsSummary } from "@/components/RequirementsSummary";
-import {
-  ADMIN_FEATURES,
-  BRANDS,
-  BUSINESS_TYPES,
-  BUYER_FEATURES,
-  DELIVERY_METHODS,
-  DESIGN_STYLES,
-  EXISTING_WEBSITE,
-  INVENTORY_SOURCE,
-  PAYMENT_GATEWAYS,
-  PRODUCT_VOLUME,
-  SIZE_RANGES,
-  labelOf,
-  labelWithOther,
-  labelsWithOther,
-} from "@/lib/catalog";
 import { emptyRequirement, type RequirementData } from "@/lib/form";
 import { faDate } from "@/lib/format";
 import { summarizeRequirements } from "@/lib/summary";
@@ -61,129 +46,29 @@ export default function SubmissionDetailPage({
         <p className="text-white/50">در حال بارگذاری...</p>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <section className="space-y-4 rounded-3xl border border-white/10 bg-[#101826] p-6">
-            <div className="flex justify-between gap-3">
+          <section className="rounded-3xl border border-white/10 bg-[#101826]/80 p-5 sm:p-8">
+            <div className="mb-6 flex justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-black">{data.storeName || "بدون نام"}</h2>
-                <p className="text-sm text-white/50">
+                <p className="text-amber-300">جزئیات نیازمندی‌ها</p>
+                <h2 className="mt-1 text-2xl font-black">{data.storeName || "بدون نام"}</h2>
+                <p className="mt-1 text-sm text-white/50">
                   {data.contactName || row.user.name} · {row.user.email}
                 </p>
               </div>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-sm">
+              <span className="h-fit rounded-full bg-white/10 px-3 py-1 text-sm">
                 {row.status === "SUBMITTED" ? "ثبت نهایی" : "پیش‌نویس"}
               </span>
             </div>
-            <dl className="grid gap-3 sm:grid-cols-2 text-sm">
-              <Item
-                label="نوع فعالیت"
-                value={labelWithOther(data.businessType, BUSINESS_TYPES, data.businessTypeOther)}
-              />
-              <Item label="شهر" value={data.city} />
-              <Item
-                label="وضعیت سایت"
-                value={labelWithOther(
-                  data.existingWebsite,
-                  EXISTING_WEBSITE,
-                  data.existingWebsiteOther,
-                )}
-              />
-              <Item
-                label="حجم کاتالوگ"
-                value={labelWithOther(data.productVolume, PRODUCT_VOLUME, data.productVolumeOther)}
-              />
-              <Item
-                label="ورود محصولات"
-                value={labelWithOther(
-                  data.inventorySource,
-                  INVENTORY_SOURCE,
-                  data.inventorySourceOther,
-                )}
-              />
-              <Item label="ثبت" value={faDate(row.submittedAt || row.updatedAt)} />
-              <Item
-                label="برندها"
-                value={labelsWithOther(data.brandsToSell, BRANDS, data.brandsOther).join("، ")}
-              />
-              <Item
-                label="سایزها"
-                value={labelsWithOther(data.sizeRanges, SIZE_RANGES, data.sizeRangesOther).join("، ")}
-              />
-              <Item
-                label="تجربه خرید"
-                value={labelsWithOther(
-                  data.buyerFeatures,
-                  BUYER_FEATURES,
-                  data.buyerFeaturesOther,
-                ).join("، ")}
-              />
-              <Item
-                label="پرداخت"
-                value={labelsWithOther(
-                  data.paymentGateways,
-                  PAYMENT_GATEWAYS,
-                  data.paymentGatewaysOther,
-                ).join("، ")}
-              />
-              <Item
-                label="ارسال"
-                value={labelsWithOther(
-                  data.deliveryMethods,
-                  DELIVERY_METHODS,
-                  data.deliveryMethodsOther,
-                ).join("، ")}
-              />
-              <Item
-                label="پنل مدیریت"
-                value={labelsWithOther(
-                  data.adminFeatures,
-                  ADMIN_FEATURES,
-                  data.adminFeaturesOther,
-                ).join("، ")}
-              />
-              <Item
-                label="طراحی"
-                value={labelWithOther(data.designStyle, DESIGN_STYLES, data.designStyleOther)}
-              />
-            </dl>
-            {data.storeDescription && (
-              <Block title="درباره فروشگاه" text={data.storeDescription} />
-            )}
-            {data.buyerNotes && <Block title="توضیحات تجربه خرید" text={data.buyerNotes} />}
-            {data.servicesNotes && <Block title="توضیحات خدمات" text={data.servicesNotes} />}
-            {data.adminNotes && <Block title="نیازهای پنل" text={data.adminNotes} />}
-            {data.referenceSites && <Block title="سایت‌های مرجع" text={data.referenceSites} />}
-            {data.designNotes && <Block title="توضیحات طراحی" text={data.designNotes} />}
-            <ul className="rounded-2xl bg-white/5 p-4 text-sm">
-              <li>نصب در محل: {data.installationOnSite ? "بله" : "خیر"}</li>
-              <li>نمایش گارانتی: {data.warrantyDisplay ? "بله" : "خیر"}</li>
-              <li>شفافیت قبل از پرداخت: {data.transparentCheckout ? "بله" : "خیر"}</li>
-              <li>لوگو آماده: {data.hasLogo ? "بله" : "خیر"}</li>
-              <li>راهنمای برند: {data.hasBrandGuide ? "بله" : "خیر"}</li>
-              <li>تم تیره: {data.darkMode ? "بله" : "خیر"}</li>
-              <li>اولویت موبایل: {data.mobileFirst ? "بله" : "خیر"}</li>
-            </ul>
+            <p className="mb-4 text-xs text-white/40">
+              آخرین بروزرسانی: {faDate(row.submittedAt || row.updatedAt)}
+            </p>
+            <ReviewPanel data={data} completionPercent={summary.completionPercent} />
           </section>
-          <RequirementsSummary data={data} summary={summary} />
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <RequirementsSummary data={data} summary={summary} />
+          </div>
         </div>
       )}
     </AdminShell>
-  );
-}
-
-function Item({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-white/5 p-3">
-      <dt className="text-xs text-white/45">{label}</dt>
-      <dd className="mt-1">{value || "—"}</dd>
-    </div>
-  );
-}
-
-function Block({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="rounded-2xl bg-white/5 p-4 text-sm leading-7">
-      <p className="mb-2 text-xs text-white/45">{title}</p>
-      <p>{text}</p>
-    </div>
   );
 }

@@ -13,7 +13,7 @@ export type RequirementData = {
   sizeRangesOther: string;
   productVolume: string;
   productVolumeOther: string;
-  inventorySource: string;
+  inventorySources: string[];
   inventorySourceOther: string;
   buyerFeatures: string[];
   buyerFeaturesOther: string;
@@ -87,7 +87,7 @@ export const emptyRequirement = (): RequirementData => ({
   sizeRangesOther: "",
   productVolume: "",
   productVolumeOther: "",
-  inventorySource: "",
+  inventorySources: [],
   inventorySourceOther: "",
   buyerFeatures: [],
   buyerFeaturesOther: "",
@@ -98,7 +98,7 @@ export const emptyRequirement = (): RequirementData => ({
   deliveryMethodsOther: "",
   installationOnSite: false,
   warrantyDisplay: false,
-  transparentCheckout: true,
+  transparentCheckout: false,
   servicesNotes: "",
   adminFeatures: [],
   adminFeaturesOther: "",
@@ -109,7 +109,7 @@ export const emptyRequirement = (): RequirementData => ({
   hasLogo: false,
   hasBrandGuide: false,
   darkMode: false,
-  mobileFirst: true,
+  mobileFirst: false,
   designNotes: "",
 });
 
@@ -130,6 +130,12 @@ export function mergeRequirement(raw: unknown): RequirementData {
       ? input.deliveryMethods
       : base.deliveryMethods,
     adminFeatures: Array.isArray(input.adminFeatures) ? input.adminFeatures : base.adminFeatures,
+    inventorySources: Array.isArray(input.inventorySources)
+      ? input.inventorySources
+      : typeof (input as { inventorySource?: string }).inventorySource === "string" &&
+          (input as { inventorySource?: string }).inventorySource
+        ? [(input as { inventorySource: string }).inventorySource]
+        : base.inventorySources,
   };
 }
 

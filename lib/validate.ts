@@ -53,9 +53,9 @@ export function validateStep(step: number, data: RequirementData): string | null
       "حجم کاتالوگ",
     );
     if (volumeOther) return volumeOther;
-    if (!data.inventorySource) return "نحوه ورود محصولات را انتخاب کنید.";
-    const inventoryOther = validateOtherSingle(
-      data.inventorySource,
+    if (data.inventorySources.length === 0) return "نحوه ورود محصولات را انتخاب کنید.";
+    const inventoryOther = validateOtherMulti(
+      data.inventorySources,
       data.inventorySourceOther,
       "ورود محصولات",
     );
