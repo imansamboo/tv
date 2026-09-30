@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 type ImagePreviewModalProps = {
   src: string;
@@ -29,12 +30,13 @@ export function ImagePreviewModal({ src, alt, open, onClose }: ImagePreviewModal
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={alt}
+      onClick={(event) => event.stopPropagation()}
     >
       <button
         type="button"
@@ -72,6 +74,7 @@ export function ImagePreviewModal({ src, alt, open, onClose }: ImagePreviewModal
         onClick={(event) => event.stopPropagation()}
         className="relative z-[1] max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] rounded-xl border border-white/10 bg-black/40 object-contain shadow-2xl"
       />
-    </div>
+    </div>,
+    document.body,
   );
 }
