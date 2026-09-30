@@ -120,8 +120,11 @@ export function OptionalItemCard({
         disabled && "cursor-default opacity-60",
       )}
       onClick={(event) => {
-        if (disabled) return;
+        if (disabled || event.defaultPrevented) return;
+        // Preview lives in a portal. A click that closes it must not select the item.
+        if (document.querySelector("[data-pricing-lightbox]")) return;
         const target = event.target as HTMLElement;
+        if (!event.currentTarget.contains(target)) return;
         if (target.closest("[data-pricing-preview], input")) return;
         onToggle();
       }}
