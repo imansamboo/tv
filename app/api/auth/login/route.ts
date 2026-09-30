@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { cookieOptions, signSession, SESSION_COOKIE } from "@/lib/auth";
+import { landingPathFor } from "@/lib/landing";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     role: user.role,
   });
 
-  const nextPath = user.role === "ADMIN" ? "/admin" : "/form";
+  const nextPath = await landingPathFor(user);
   const response = NextResponse.json({
     ok: true,
     next: nextPath,

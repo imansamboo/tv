@@ -6,7 +6,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { ReviewPanel } from "@/components/form/ReviewPanel";
 import { RequirementsSummary } from "@/components/RequirementsSummary";
 import { emptyRequirement, type RequirementData } from "@/lib/form";
-import { faDate } from "@/lib/format";
+import { faDate, toman } from "@/lib/format";
 import { summarizeRequirements } from "@/lib/summary";
 
 type Detail = {
@@ -18,6 +18,12 @@ type Detail = {
   submittedAt: string | null;
   updatedAt: string;
   user: { email: string; name: string | null };
+  pricingQuote: {
+    id: string;
+    basePrice: number;
+    totalPrice: number;
+    submittedAt: string;
+  } | null;
 };
 
 export default function SubmissionDetailPage({
@@ -62,6 +68,26 @@ export default function SubmissionDetailPage({
             <p className="mb-4 text-xs text-white/40">
               آخرین بروزرسانی: {faDate(row.submittedAt || row.updatedAt)}
             </p>
+            {row.pricingQuote ? (
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
+                <div>
+                  <p className="text-xs text-amber-200">قیمت نهایی ثبت‌شده</p>
+                  <p className="mt-1 text-xl font-black text-amber-300">
+                    {toman(row.pricingQuote.totalPrice)}
+                  </p>
+                  <p className="mt-1 text-xs text-white/45">
+                    پایه {toman(row.pricingQuote.basePrice)} ·{" "}
+                    {faDate(row.pricingQuote.submittedAt)}
+                  </p>
+                </div>
+                <Link
+                  href={`/admin/quotes/${row.pricingQuote.id}`}
+                  className="rounded-2xl bg-amber-400 px-4 py-2 text-sm font-bold text-black"
+                >
+                  جزئیات قیمت‌گذاری
+                </Link>
+              </div>
+            ) : null}
             <ReviewPanel data={data} completionPercent={summary.completionPercent} />
           </section>
           <div className="lg:sticky lg:top-24 lg:self-start">

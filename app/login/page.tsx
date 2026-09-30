@@ -19,7 +19,7 @@ function LoginForm() {
       .then((res) => res.json())
       .then((payload) => {
         if (payload.user) {
-          router.replace(search.get("next") || (payload.user.role === "ADMIN" ? "/admin" : "/form"));
+          router.replace(search.get("next") || payload.landing || "/form");
         }
       })
       .finally(() => setCheckingSession(false));

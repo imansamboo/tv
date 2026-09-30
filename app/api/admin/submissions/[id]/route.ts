@@ -15,12 +15,24 @@ export async function GET(
   const { id } = await context.params;
   const row = await prisma.requirement.findUnique({
     where: { id },
-    include: { user: { select: { email: true, name: true, createdAt: true } } },
+    include: {
+      user: {
+        select: {
+          email: true,
+          name: true,
+          createdAt: true,
+          pricingQuote: {
+            select: { id: true, basePrice: true, totalPrice: true, submittedAt: true },
+          },
+        },
+      },
+    },
   });
   if (!row) {
     return NextResponse.json({ error: "درخواست پیدا نشد." }, { status: 404 });
   }
 
+  const { pricingQuote, ...user } = row.user;
   const data = mergeRequirement(JSON.parse(row.data));
   return NextResponse.json({
     id: row.id,
@@ -31,6 +43,7 @@ export async function GET(
     completionPercent: row.totalPrice,
     submittedAt: row.submittedAt,
     updatedAt: row.updatedAt,
-    user: row.user,
+    user,
+    pricingQuote,
   });
 }
