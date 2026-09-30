@@ -16,7 +16,7 @@ function ItemImage({ src, alt }: { src: string | null; alt: string }) {
 
   if (!src) return null;
 
-  function openPreview(event: React.MouseEvent | React.KeyboardEvent) {
+  function openPreview(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
     setPreviewOpen(true);
@@ -24,24 +24,23 @@ function ItemImage({ src, alt }: { src: string | null; alt: string }) {
 
   return (
     <>
-      <div
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
+        data-pricing-preview
         aria-label={`نمایش بزرگ ${alt}`}
+        onMouseDown={(event) => event.stopPropagation()}
         onClick={openPreview}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") openPreview(event);
-        }}
-        className="shrink-0 cursor-zoom-in rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+        className="m-0 inline-flex shrink-0 cursor-zoom-in border-0 bg-transparent p-0 leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
       >
         <Image
           src={src}
           alt={alt}
           width={PRICING_IMAGE_SIZE}
           height={PRICING_IMAGE_SIZE}
-          className="h-20 w-20 rounded-2xl border border-white/10 bg-black/20 object-cover sm:h-28 sm:w-28"
+          draggable={false}
+          className="pointer-events-none h-20 w-20 rounded-2xl border border-white/10 bg-black/20 object-cover sm:h-28 sm:w-28"
         />
-      </div>
+      </button>
       <ImagePreviewModal
         src={src}
         alt={alt}
@@ -112,7 +111,7 @@ export function OptionalItemCard({
   onToggle: () => void;
 }) {
   return (
-    <label
+    <div
       className={cn(
         "flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition",
         selected
@@ -120,17 +119,28 @@ export function OptionalItemCard({
           : "border-white/10 bg-white/5 hover:border-white/25",
         disabled && "cursor-default opacity-60",
       )}
+      onClick={(event) => {
+        if (disabled || event.defaultPrevented) return;
+        // Preview lives in a portal. A click that closes it must not select the item.
+        if (document.querySelector("[data-pricing-lightbox]")) return;
+        const target = event.target as HTMLElement;
+        if (!event.currentTarget.contains(target)) return;
+        if (target.closest("[data-pricing-preview], input")) return;
+        onToggle();
+      }}
     >
       <input
         type="checkbox"
+        aria-label={item.title}
         className="mt-1 h-5 w-5 shrink-0 accent-amber-400"
         checked={selected}
         disabled={disabled}
+        onClick={(event) => event.stopPropagation()}
         onChange={onToggle}
       />
       <ItemImage src={item.imageUrl} alt={item.title} />
       <ItemBody item={item} badge="اختیاری" badgeClass="bg-white/10 text-white/60" />
       <ItemPrice item={item} />
-    </label>
+    </div>
   );
 }
