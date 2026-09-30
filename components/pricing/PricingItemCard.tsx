@@ -1,22 +1,54 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
+import { ImagePreviewModal } from "@/components/pricing/ImagePreviewModal";
 import { cn } from "@/lib/cn";
 import { toman } from "@/lib/format";
 import { PRICING_IMAGE_SIZE, type PricingItemView } from "@/lib/pricing";
 
-/**
- * Square thumbnail, rendered only when the item actually has an image so a
- * missing one leaves no empty box and does not change the card layout.
- */
+const IMAGE_SLOT_CLASS = "h-20 w-20 shrink-0 sm:h-28 sm:w-28";
+
 function ItemImage({ src, alt }: { src: string | null; alt: string }) {
-  if (!src) return null;
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  if (!src) {
+    return <div className={IMAGE_SLOT_CLASS} aria-hidden="true" />;
+  }
+
+  function openPreview(event: React.MouseEvent | React.KeyboardEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    setPreviewOpen(true);
+  }
+
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={PRICING_IMAGE_SIZE}
-      height={PRICING_IMAGE_SIZE}
-      className="h-20 w-20 shrink-0 rounded-2xl border border-white/10 bg-black/20 object-cover sm:h-28 sm:w-28"
-    />
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={`نمایش بزرگ ${alt}`}
+        onClick={openPreview}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") openPreview(event);
+        }}
+        className="shrink-0 cursor-zoom-in rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+      >
+        <Image
+          src={src}
+          alt={alt}
+          width={PRICING_IMAGE_SIZE}
+          height={PRICING_IMAGE_SIZE}
+          className={`${IMAGE_SLOT_CLASS} rounded-2xl border border-white/10 bg-black/20 object-cover`}
+        />
+      </div>
+      <ImagePreviewModal
+        src={src}
+        alt={alt}
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+      />
+    </>
   );
 }
 
