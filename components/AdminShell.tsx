@@ -5,7 +5,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-const links = [{ href: "/admin", label: "نیازمندی‌ها" }];
+const links = [
+  { href: "/admin", label: "نیازمندی‌ها" },
+  { href: "/admin/pricing", label: "تنظیم فرم قیمت" },
+  { href: "/admin/quotes", label: "قیمت‌گذاری‌ها" },
+];
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();

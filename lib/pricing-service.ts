@@ -1,0 +1,228 @@
+import { Prisma } from "@prisma/client";
+import { prisma } from "./prisma";
+import {
+  BASE_LOCK_VALUE,
+  sortSections,
+  type PricingItemKind,
+  type PricingSectionView,
+} from "./pricing";
+
+/** Admin view keeps the fields the customer form filters out. */
+export type AdminPricingItem = {
+  id: string;
+  sectionId: string;
+  title: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  kind: PricingItemKind;
+  sortOrder: number;
+  active: boolean;
+};
+
+export type AdminPricingSection = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  sortOrder: number;
+  active: boolean;
+  items: AdminPricingItem[];
+};
+
+export type PricingQuoteItemView = {
+  id: string;
+  itemId: string | null;
+  sectionTitle: string;
+  title: string;
+  description: string | null;
+  price: number;
+  kind: PricingItemKind;
+  position: number;
+  selected: boolean;
+};
+
+export type PricingQuoteView = {
+  id: string;
+  basePrice: number;
+  extrasPrice: number;
+  totalPrice: number;
+  submittedAt: string;
+  items: PricingQuoteItemView[];
+};
+
+const sectionWithItems = {
+  items: { orderBy: [{ sortOrder: "asc" }, { title: "asc" }] },
+} satisfies Prisma.PricingSectionInclude;
+
+/** Sections and items the customer may choose from: active ones only. */
+export async function loadPricingForm(): Promise<PricingSectionView[]> {
+  const sections = await prisma.pricingSection.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+    include: { items: { ...sectionWithItems.items, where: { active: true } } },
+  });
+
+  return sortSections(
+    sections.map((section) => ({
+      id: section.id,
+      title: section.title,
+      subtitle: section.subtitle,
+      sortOrder: section.sortOrder,
+      items: section.items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        price: item.price,
+        imageUrl: item.imageUrl,
+        kind: item.kind,
+        sortOrder: item.sortOrder,
+      })),
+    })),
+  );
+}
+
+/** Full configuration, including disabled rows, for the admin screens. */
+export async function loadPricingConfig(): Promise<AdminPricingSection[]> {
+  const sections = await prisma.pricingSection.findMany({
+    orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+    include: sectionWithItems,
+  });
+
+  return sections.map((section) => ({
+    id: section.id,
+    title: section.title,
+    subtitle: section.subtitle,
+    sortOrder: section.sortOrder,
+    active: section.active,
+    items: section.items.map((item) => ({
+      id: item.id,
+      sectionId: item.sectionId,
+      title: item.title,
+      description: item.description,
+      price: item.price,
+      imageUrl: item.imageUrl,
+      kind: item.kind,
+      sortOrder: item.sortOrder,
+      active: item.active,
+    })),
+  }));
+}
+
+export function serializeQuote(
+  quote: Prisma.PricingQuoteGetPayload<{ include: { items: true } }>,
+): PricingQuoteView {
+  return {
+    id: quote.id,
+    basePrice: quote.basePrice,
+    extrasPrice: quote.extrasPrice,
+    totalPrice: quote.totalPrice,
+    submittedAt: quote.submittedAt.toISOString(),
+    items: [...quote.items]
+      .sort((a, b) => a.position - b.position)
+      .map((item) => ({
+        id: item.id,
+        itemId: item.itemId,
+        sectionTitle: item.sectionTitle,
+        title: item.title,
+        description: item.description,
+        price: item.price,
+        kind: item.kind,
+        position: item.position,
+        selected: item.selected,
+      })),
+  };
+}
+
+export async function findQuoteForUser(userId: string) {
+  const quote = await prisma.pricingQuote.findUnique({
+    where: { userId },
+    include: { items: true },
+  });
+  return quote ? serializeQuote(quote) : null;
+}
+
+/** The `baseLock` column carries the marker only on the single base item. */
+export function baseLockFor(kind: PricingItemKind) {
+  return kind === "BASE" ? BASE_LOCK_VALUE : null;
+}
+
+/**
+ * True when the write failed because another item already holds the base slot.
+ * The unique index on `PricingItem.baseLock` is what actually enforces the rule.
+ */
+export function isDuplicateBaseError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    String(error.meta?.target ?? "").includes("baseLock")
+  );
+}
+
+export const DUPLICATE_BASE_MESSAGE =
+  "فقط یک مورد پایه می‌تواند وجود داشته باشد. ابتدا مورد پایه فعلی را به «اختیاری» تغییر دهید.";
+
+export async function nextSectionOrder() {
+  const last = await prisma.pricingSection.findFirst({ orderBy: { sortOrder: "desc" } });
+  return (last?.sortOrder ?? -1) + 1;
+}
+
+export async function nextItemOrder(sectionId: string) {
+  const last = await prisma.pricingItem.findFirst({
+    where: { sectionId },
+    orderBy: { sortOrder: "desc" },
+  });
+  return (last?.sortOrder ?? -1) + 1;
+}
+
+/**
+ * Swaps a row with its neighbour in one transaction. Sibling orders are
+ * renumbered first so rows that share a `sortOrder` still move predictably.
+ */
+export async function moveSection(id: string, direction: "up" | "down") {
+  return prisma.$transaction(async (tx) => {
+    const siblings = await tx.pricingSection.findMany({
+      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+      select: { id: true },
+    });
+    const index = siblings.findIndex((sibling) => sibling.id === id);
+    if (index === -1) return false;
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= siblings.length) return false;
+
+    const reordered = [...siblings];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    for (const [position, sibling] of reordered.entries()) {
+      await tx.pricingSection.update({
+        where: { id: sibling.id },
+        data: { sortOrder: position },
+      });
+    }
+    return true;
+  });
+}
+
+export async function moveItem(id: string, direction: "up" | "down") {
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.pricingItem.findUnique({ where: { id }, select: { sectionId: true } });
+    if (!item) return false;
+
+    const siblings = await tx.pricingItem.findMany({
+      where: { sectionId: item.sectionId },
+      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+      select: { id: true },
+    });
+    const index = siblings.findIndex((sibling) => sibling.id === id);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (index === -1 || target < 0 || target >= siblings.length) return false;
+
+    const reordered = [...siblings];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    for (const [position, sibling] of reordered.entries()) {
+      await tx.pricingItem.update({
+        where: { id: sibling.id },
+        data: { sortOrder: position },
+      });
+    }
+    return true;
+  });
+}

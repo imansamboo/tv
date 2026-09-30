@@ -17,6 +17,11 @@ enum FormStatus {
   SUBMITTED
 }
 
+enum PricingItemKind {
+  BASE
+  OPTIONAL
+}
+
 model User {
   id            String        @id @default(cuid())
   email         String        @unique
@@ -25,6 +30,7 @@ model User {
   role          Role          @default(CUSTOMER)
   createdAt     DateTime      @default(now())
   requirement   Requirement?
+  pricingQuote  PricingQuote?
   campaignLeads CampaignLead[]
 }
 
@@ -51,4 +57,72 @@ model CampaignLead {
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
+}
+
+model PricingSection {
+  id        String        @id @default(cuid())
+  title     String
+  subtitle  String?
+  sortOrder Int           @default(0)
+  active    Boolean       @default(true)
+  items     PricingItem[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([sortOrder])
+}
+
+model PricingItem {
+  id          String             @id @default(cuid())
+  sectionId   String
+  section     PricingSection     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  price       Int                @default(0)
+  imageUrl    String?
+  kind        PricingItemKind    @default(OPTIONAL)
+  /// Holds the literal "BASE" on the single mandatory item and NULL everywhere
+  /// else. SQLite treats NULLs as distinct in a UNIQUE index, so this gives the
+  /// "at most one base item" rule a database constraint instead of only code.
+  baseLock    String?            @unique
+  sortOrder   Int                @default(0)
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  quoteItems  PricingQuoteItem[]
+
+  @@index([sectionId, sortOrder])
+}
+
+model PricingQuote {
+  id          String             @id @default(cuid())
+  userId      String             @unique
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  basePrice   Int                @default(0)
+  extrasPrice Int                @default(0)
+  totalPrice  Int                @default(0)
+  submittedAt DateTime           @default(now())
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  items       PricingQuoteItem[]
+}
+
+/// Snapshot of every item offered at submission time, so later edits to the
+/// pricing configuration never rewrite an existing quote.
+model PricingQuoteItem {
+  id           String          @id @default(cuid())
+  quoteId      String
+  quote        PricingQuote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  itemId       String?
+  item         PricingItem?    @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  sectionTitle String
+  title        String
+  description  String?
+  price        Int
+  kind         PricingItemKind
+  /// Flat position of the row in the form as the customer saw it.
+  position     Int
+  selected     Boolean         @default(false)
+
+  @@index([quoteId])
 }

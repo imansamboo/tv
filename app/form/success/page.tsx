@@ -40,12 +40,20 @@ export default function SuccessPage() {
           </p>
         )}
         {locked && (
-          <Link
-            href="/form"
-            className="mt-6 inline-block rounded-2xl bg-amber-400 px-5 py-3 font-bold text-black"
-          >
-            مشاهده بازبینی
-          </Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/pricing"
+              className="inline-block rounded-2xl bg-amber-400 px-5 py-3 font-bold text-black"
+            >
+              انتخاب امکانات و تعیین قیمت
+            </Link>
+            <Link
+              href="/form"
+              className="inline-block rounded-2xl border border-white/15 px-5 py-3 font-bold"
+            >
+              مشاهده بازبینی
+            </Link>
+          </div>
         )}
       </section>
       <RequirementsSummary data={data} summary={summary} />

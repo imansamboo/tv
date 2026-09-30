@@ -15,11 +15,15 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [landing, setLanding] = useState("/form");
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
-      .then((payload) => setUser(payload.user ?? null))
+      .then((payload) => {
+        setUser(payload.user ?? null);
+        setLanding(payload.landing ?? "/form");
+      })
       .catch(() => setUser(null));
   }, [pathname]);
 
@@ -60,6 +64,15 @@ export function Header() {
             <Link className={linkClass("/admin")} href="/admin">
               پنل مدیریت
             </Link>
+          ) : landing === "/pricing" ? (
+            <>
+              <Link className={linkClass("/pricing")} href="/pricing">
+                فرم قیمت‌گذاری
+              </Link>
+              <Link className={linkClass("/form")} href="/form">
+                نیازمندی‌ها
+              </Link>
+            </>
           ) : (
             <Link className={linkClass("/form")} href="/form">
               فرم نیازمندی‌ها

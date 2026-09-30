@@ -12,7 +12,10 @@ export async function proxy(request: NextRequest) {
   const session = await readSession(request.cookies.get(SESSION_COOKIE)?.value);
 
   const needsUser =
-    pathname.startsWith("/form") || pathname.startsWith("/api/form");
+    pathname.startsWith("/form") ||
+    pathname.startsWith("/api/form") ||
+    pathname.startsWith("/pricing") ||
+    pathname.startsWith("/api/pricing");
   const needsAdmin =
     (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) &&
     pathname !== "/admin/login";
@@ -43,5 +46,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/form/:path*", "/admin/:path*", "/api/form/:path*", "/api/admin/:path*"],
+  matcher: [
+    "/form/:path*",
+    "/pricing/:path*",
+    "/admin/:path*",
+    "/api/form/:path*",
+    "/api/pricing/:path*",
+    "/api/admin/:path*",
+  ],
 };

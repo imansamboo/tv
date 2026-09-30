@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RequirementsSummary } from "@/components/RequirementsSummary";
@@ -212,8 +213,16 @@ export function FormWizard() {
         )}
 
         {locked && (
-          <div className="mb-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
-            این نیازمندی‌ها در {submittedAt ? new Date(submittedAt).toLocaleString("fa-IR") : "گذشته"} ثبت نهایی شده و دیگر قابل ویرایش نیست.
+          <div className="mb-6 space-y-3 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
+            <p>
+              این نیازمندی‌ها در {submittedAt ? new Date(submittedAt).toLocaleString("fa-IR") : "گذشته"} ثبت نهایی شده و دیگر قابل ویرایش نیست.
+            </p>
+            <Link
+              href="/pricing"
+              className="inline-block rounded-2xl bg-amber-400 px-4 py-2 text-xs font-bold text-black"
+            >
+              مرحله بعد: انتخاب امکانات و تعیین قیمت
+            </Link>
           </div>
         )}
 

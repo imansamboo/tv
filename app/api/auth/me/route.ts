@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { landingPathFor } from "@/lib/landing";
 import { getSession } from "@/lib/session";
 
 export async function GET() {
@@ -13,5 +14,7 @@ export async function GET() {
       name: session.name,
       role: session.role,
     },
+    // Lets the header and home CTA point at the step the user is actually on.
+    landing: await landingPathFor({ id: session.sub, role: session.role }),
   });
 }

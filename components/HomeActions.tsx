@@ -7,22 +7,30 @@ type User = {
   role: "CUSTOMER" | "ADMIN";
 };
 
+const LABELS: Record<string, string> = {
+  "/admin": "ورود به پنل مدیریت",
+  "/pricing": "ادامه با فرم قیمت‌گذاری",
+  "/form": "ادامه فرم نیازمندی‌ها",
+};
+
 export function HomeActions() {
   const [user, setUser] = useState<User | null>(null);
+  const [landing, setLanding] = useState("/form");
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
-      .then((payload) => setUser(payload.user ?? null))
+      .then((payload) => {
+        setUser(payload.user ?? null);
+        setLanding(payload.landing ?? "/form");
+      })
       .catch(() => setUser(null));
   }, []);
 
   if (user) {
-    const href = user.role === "ADMIN" ? "/admin" : "/form";
-    const label = user.role === "ADMIN" ? "ورود به پنل مدیریت" : "ادامه فرم نیازمندی‌ها";
     return (
-      <Link href={href} className="rounded-2xl bg-amber-400 px-6 py-3 font-bold text-black">
-        {label}
+      <Link href={landing} className="rounded-2xl bg-amber-400 px-6 py-3 font-bold text-black">
+        {LABELS[landing] ?? LABELS["/form"]}
       </Link>
     );
   }
