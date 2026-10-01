@@ -22,16 +22,29 @@ enum PricingItemKind {
   OPTIONAL
 }
 
+enum NotificationKind {
+  REQUIREMENT_SUBMITTED
+  PRICING_SUBMITTED
+}
+
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
-  passwordHash  String
-  name          String?
-  role          Role          @default(CUSTOMER)
-  createdAt     DateTime      @default(now())
-  requirement   Requirement?
-  pricingQuote  PricingQuote?
-  campaignLeads CampaignLead[]
+  id                    String              @id @default(cuid())
+  email                 String              @unique
+  passwordHash          String
+  name                  String?
+  role                  Role                @default(CUSTOMER)
+  createdAt             DateTime            @default(now())
+  requirement           Requirement?
+  pricingQuote          PricingQuote?
+  campaignLeads         CampaignLead[]
+  /// The pricing form the admin prepared for this customer. Until it is set the
+  /// customer only sees a "your pricing form is being prepared" message.
+  pricingFormId         String?
+  pricingForm           PricingForm?        @relation(fields: [pricingFormId], references: [id], onDelete: SetNull)
+  pricingFormAssignedAt DateTime?
+  notifications         AdminNotification[]
+
+  @@index([pricingFormId])
 }
 
 model Requirement {
@@ -90,8 +103,44 @@ model PricingItem {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   quoteItems  PricingQuoteItem[]
+  formItems   PricingFormItem[]
 
   @@index([sectionId, sortOrder])
+}
+
+/// A selection of catalogue items prepared by the admin and assigned to one or
+/// more customers. The base item is always part of every form.
+model PricingForm {
+  id        String            @id @default(cuid())
+  title     String
+  note      String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  items     PricingFormItem[]
+  users     User[]
+}
+
+model PricingFormItem {
+  id     String      @id @default(cuid())
+  formId String
+  form   PricingForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  itemId String
+  item   PricingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  /// Price for this form only; NULL falls back to the catalogue price.
+  price  Int?
+
+  @@unique([formId, itemId])
+}
+
+model AdminNotification {
+  id        String           @id @default(cuid())
+  kind      NotificationKind
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([readAt, createdAt])
 }
 
 model PricingQuote {

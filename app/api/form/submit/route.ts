@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { mergeRequirement } from "@/lib/form";
+import { notifyAdmins } from "@/lib/notifications";
 import { summarizeRequirements } from "@/lib/summary";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -46,6 +47,8 @@ export async function POST() {
       data: JSON.stringify(data),
     },
   });
+
+  await notifyAdmins("REQUIREMENT_SUBMITTED", session.sub);
 
   return NextResponse.json({
     ok: true,

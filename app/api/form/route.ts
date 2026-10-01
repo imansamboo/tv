@@ -26,8 +26,12 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "وارد شوید." }, { status: 401 });
   }
-  const { requirement, data, summary } = await loadOrCreate(session.sub);
+  const [{ requirement, data, summary }, user] = await Promise.all([
+    loadOrCreate(session.sub),
+    prisma.user.findUnique({ where: { id: session.sub }, select: { pricingFormId: true } }),
+  ]);
   return NextResponse.json({
+    pricingFormAssigned: Boolean(user?.pricingFormId),
     status: requirement.status,
     currentStep: requirement.currentStep,
     data,

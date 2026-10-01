@@ -20,6 +20,10 @@ export const PRICING_IMAGE_SIZE = 112;
 export const PRICING_IMAGE_HINT =
   "تصویر مربعی، حداقل ۴۰۰×۴۰۰ پیکسل و کمتر از ۲ مگابایت — اختیاری است.";
 
+/** Shown to a customer whose requirements are in but who has no pricing form yet. */
+export const PRICING_FORM_PENDING_MESSAGE =
+  "نیازمندی‌های شما ثبت شد. فرم قیمت‌گذاری اختصاصی شما در حال آماده‌سازی است و به‌محض آماده شدن، در همین صفحه نمایش داده می‌شود.";
+
 export const PRICING_KIND_LABELS: Record<PricingItemKind, string> = {
   BASE: "پایه",
   OPTIONAL: "اختیاری",
@@ -182,6 +186,35 @@ export function calculatePricing(
     selectedLines: lines.filter((line) => line.selected),
     totals: sumPricingTotals(lines),
   };
+}
+
+export type PricingFormEntry = {
+  itemId: string;
+  /** `null` keeps the catalogue price. */
+  price: number | null;
+};
+
+/**
+ * Narrows the active catalogue to the items picked for one customer's form and
+ * applies that form's prices. The base item is always kept so every form has a
+ * starting price; sections left without items are dropped.
+ */
+export function applyPricingForm(
+  sections: PricingSectionView[],
+  entries: readonly PricingFormEntry[],
+): PricingSectionView[] {
+  const byItem = new Map(entries.map((entry) => [entry.itemId, entry]));
+  return sortSections(sections)
+    .map((section) => ({
+      ...section,
+      items: section.items
+        .filter((item) => item.kind === "BASE" || byItem.has(item.id))
+        .map((item) => {
+          const price = byItem.get(item.id)?.price;
+          return price === null || price === undefined ? item : { ...item, price };
+        }),
+    }))
+    .filter((section) => section.items.length > 0);
 }
 
 /** Persian message when a price is outside the storable range, else `null`. */

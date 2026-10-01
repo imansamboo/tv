@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import {
   BASE_LOCK_VALUE,
+  applyPricingForm,
   sortSections,
   type PricingItemKind,
   type PricingSectionView,
@@ -79,6 +80,18 @@ export async function loadPricingForm(): Promise<PricingSectionView[]> {
       })),
     })),
   );
+}
+
+/** The form one customer was assigned: active catalogue rows filtered by the form. */
+export async function loadAssignedPricingForm(formId: string): Promise<PricingSectionView[]> {
+  const [sections, entries] = await Promise.all([
+    loadPricingForm(),
+    prisma.pricingFormItem.findMany({
+      where: { formId },
+      select: { itemId: true, price: true },
+    }),
+  ]);
+  return applyPricingForm(sections, entries);
 }
 
 /** Full configuration, including disabled rows, for the admin screens. */

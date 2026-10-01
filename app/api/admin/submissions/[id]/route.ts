@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { mergeRequirement } from "@/lib/form";
+import { listPricingForms } from "@/lib/pricing-forms";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -18,9 +19,12 @@ export async function GET(
     include: {
       user: {
         select: {
+          id: true,
           email: true,
           name: true,
           createdAt: true,
+          pricingFormAssignedAt: true,
+          pricingForm: { select: { id: true, title: true } },
           pricingQuote: {
             select: { id: true, basePrice: true, totalPrice: true, submittedAt: true },
           },
@@ -32,8 +36,9 @@ export async function GET(
     return NextResponse.json({ error: "درخواست پیدا نشد." }, { status: 404 });
   }
 
-  const { pricingQuote, ...user } = row.user;
+  const { pricingQuote, pricingForm, pricingFormAssignedAt, ...user } = row.user;
   const data = mergeRequirement(JSON.parse(row.data));
+  const forms = await listPricingForms();
   return NextResponse.json({
     id: row.id,
     status: row.status,
@@ -45,5 +50,14 @@ export async function GET(
     updatedAt: row.updatedAt,
     user,
     pricingQuote,
+    pricingForm: pricingForm ? { ...pricingForm, assignedAt: pricingFormAssignedAt } : null,
+    pricingForms: forms.map((form) => ({
+      id: form.id,
+      title: form.title,
+      basePrice: form.basePrice,
+      maxPrice: form.maxPrice,
+      itemCount: form.itemCount,
+      configError: form.configError,
+    })),
   });
 }

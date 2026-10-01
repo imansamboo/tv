@@ -39,6 +39,7 @@ import {
   toggleInList,
   type RequirementData,
 } from "@/lib/form";
+import { PRICING_FORM_PENDING_MESSAGE } from "@/lib/pricing";
 import { summarizeRequirements, type RequirementSummary } from "@/lib/summary";
 import { validateStep } from "@/lib/validate";
 
@@ -48,6 +49,7 @@ type FormPayload = {
   data: RequirementData;
   summary: RequirementSummary;
   submittedAt: string | null;
+  pricingFormAssigned: boolean;
   userName?: string;
 };
 
@@ -83,6 +85,7 @@ export function FormWizard() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<RequirementData>(emptyRequirement);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+  const [pricingFormAssigned, setPricingFormAssigned] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
   const summary = useMemo(() => summarizeRequirements(data), [data]);
@@ -118,6 +121,7 @@ export function FormWizard() {
         }
         setData(incoming);
         setSubmittedAt(payload.submittedAt);
+        setPricingFormAssigned(payload.pricingFormAssigned);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -217,12 +221,18 @@ export function FormWizard() {
             <p>
               این نیازمندی‌ها در {submittedAt ? new Date(submittedAt).toLocaleString("fa-IR") : "گذشته"} ثبت نهایی شده و دیگر قابل ویرایش نیست.
             </p>
-            <Link
-              href="/pricing"
-              className="inline-block rounded-2xl bg-amber-400 px-4 py-2 text-xs font-bold text-black"
-            >
-              مرحله بعد: انتخاب امکانات و تعیین قیمت
-            </Link>
+            {pricingFormAssigned ? (
+              <Link
+                href="/pricing"
+                className="inline-block rounded-2xl bg-amber-400 px-4 py-2 text-xs font-bold text-black"
+              >
+                مرحله بعد: انتخاب امکانات و تعیین قیمت
+              </Link>
+            ) : (
+              <p className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-200">
+                {PRICING_FORM_PENDING_MESSAGE}
+              </p>
+            )}
           </div>
         )}
 
