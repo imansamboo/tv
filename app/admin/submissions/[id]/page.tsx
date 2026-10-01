@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
+import { PricingFormAssigner, type AssignableForm } from "@/components/PricingFormAssigner";
 import { ReviewPanel } from "@/components/form/ReviewPanel";
 import { RequirementsSummary } from "@/components/RequirementsSummary";
 import { emptyRequirement, type RequirementData } from "@/lib/form";
@@ -17,13 +18,15 @@ type Detail = {
   featureCount: number;
   submittedAt: string | null;
   updatedAt: string;
-  user: { email: string; name: string | null };
+  user: { id: string; email: string; name: string | null };
   pricingQuote: {
     id: string;
     basePrice: number;
     totalPrice: number;
     submittedAt: string;
   } | null;
+  pricingForm: { id: string; title: string; assignedAt: string | null } | null;
+  pricingForms: AssignableForm[];
 };
 
 export default function SubmissionDetailPage({
@@ -34,11 +37,13 @@ export default function SubmissionDetailPage({
   const { id } = use(params);
   const [row, setRow] = useState<Detail | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch(`/api/admin/submissions/${id}`)
       .then((res) => res.json())
       .then(setRow);
   }, [id]);
+
+  useEffect(load, [load]);
 
   const data = row?.data || emptyRequirement();
   const summary = summarizeRequirements(data);
@@ -87,6 +92,14 @@ export default function SubmissionDetailPage({
                   جزئیات قیمت‌گذاری
                 </Link>
               </div>
+            ) : row.status === "SUBMITTED" ? (
+              <PricingFormAssigner
+                key={row.pricingForm?.id ?? "none"}
+                userId={row.user.id}
+                current={row.pricingForm}
+                forms={row.pricingForms}
+                onChanged={load}
+              />
             ) : null}
             <ReviewPanel data={data} completionPercent={summary.completionPercent} />
           </section>

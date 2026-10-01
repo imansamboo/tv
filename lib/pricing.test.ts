@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   MAX_ITEM_PRICE,
+  applyPricingForm,
   calculatePricing,
   findBaseItem,
   itemPriceError,
@@ -197,4 +198,40 @@ test("very large selections are refused instead of overflowing the total column"
   assert.equal(totals.totalPrice, 3 * MAX_ITEM_PRICE);
   assert.ok(totalPriceError(totals.totalPrice));
   assert.equal(totalPriceError(calculatePricing(sections, []).totals.totalPrice), null);
+});
+
+test("an assigned form only offers its own items and always keeps the base item", () => {
+  const sections = [
+    ...websiteConfig(),
+    section({
+      id: "marketing",
+      sortOrder: 1,
+      items: [item({ id: "seo", price: 7_000_000 })],
+    }),
+  ];
+  const form = applyPricingForm(sections, [{ itemId: "sms", price: null }]);
+  assert.deepEqual(
+    form.map((s) => [s.id, s.items.map((i) => i.id)]),
+    [["website", ["base", "sms"]]],
+  );
+  assert.equal(pricingConfigError(form), null);
+});
+
+test("form prices override the catalogue and drive the calculated total", () => {
+  const form = applyPricingForm(websiteConfig(), [
+    { itemId: "base", price: 40_000_000 },
+    { itemId: "gateway", price: 1_000_000 },
+    { itemId: "sms", price: null },
+  ]);
+  const { totals } = calculatePricing(form, ["gateway", "sms"]);
+  assert.equal(totals.basePrice, 40_000_000);
+  assert.equal(totals.extrasPrice, 3_000_000);
+});
+
+test("form entries for items no longer in the active catalogue are ignored", () => {
+  const form = applyPricingForm(websiteConfig(), [{ itemId: "deleted", price: 1 }]);
+  assert.deepEqual(
+    form.flatMap((s) => s.items.map((i) => i.id)),
+    ["base"],
+  );
 });

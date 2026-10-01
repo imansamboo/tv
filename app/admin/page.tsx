@@ -19,10 +19,12 @@ type Row = {
   completionPercent: number;
   submittedAt: string | null;
   updatedAt: string;
+  pricingFormTitle: string | null;
+  quoteId: string | null;
 };
 
 type Payload = {
-  stats: { users: number; drafts: number; submitted: number };
+  stats: { users: number; drafts: number; submitted: number; awaitingForm: number };
   submissions: Row[];
 };
 
@@ -47,11 +49,12 @@ export default function AdminPage() {
 
   return (
     <AdminShell>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         {[
           ["فروشگاه‌ها", payload?.stats.users],
           ["پیش‌نویس", payload?.stats.drafts],
           ["ثبت نهایی", payload?.stats.submitted],
+          ["در انتظار فرم قیمت", payload?.stats.awaitingForm],
         ].map(([label, value]) => (
           <div key={String(label)} className="rounded-3xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs text-white/45">{label}</p>
@@ -66,10 +69,10 @@ export default function AdminPage() {
         className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-amber-400"
       />
       <div className="overflow-x-auto rounded-3xl border border-white/10">
-        <table className="w-full min-w-[720px] text-right text-sm">
+        <table className="w-full min-w-[820px] text-right text-sm">
           <thead className="bg-white/5 text-white/50">
             <tr>
-              {["فروشگاه", "رابط", "فعالیت", "پیشرفت", "وضعیت", ""].map((h) => (
+              {["فروشگاه", "رابط", "فعالیت", "پیشرفت", "وضعیت", "فرم قیمت", ""].map((h) => (
                 <th key={h} className="px-4 py-3 font-medium">
                   {h}
                 </th>
@@ -99,6 +102,21 @@ export default function AdminPage() {
                   <div className="text-xs text-white/45">
                     {faDate(row.submittedAt || row.updatedAt)}
                   </div>
+                </td>
+                <td className="px-4 py-3 text-xs">
+                  {row.quoteId ? (
+                    <Link className="text-emerald-300" href={`/admin/quotes/${row.quoteId}`}>
+                      ثبت شده
+                    </Link>
+                  ) : row.pricingFormTitle ? (
+                    <span className="text-white/70">{row.pricingFormTitle}</span>
+                  ) : row.status === "SUBMITTED" ? (
+                    <Link className="text-amber-300" href={`/admin/submissions/${row.id}`}>
+                      در انتظار اختصاص
+                    </Link>
+                  ) : (
+                    <span className="text-white/35">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <Link className="text-amber-300" href={`/admin/submissions/${row.id}`}>

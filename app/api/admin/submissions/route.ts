@@ -9,18 +9,35 @@ export async function GET() {
     return NextResponse.json({ error: "دسترسی غیرمجاز." }, { status: 403 });
   }
 
-  const [users, drafts, submitted, rows] = await Promise.all([
+  const [users, drafts, submitted, awaitingForm, rows] = await Promise.all([
     prisma.user.count({ where: { role: "CUSTOMER" } }),
     prisma.requirement.count({ where: { status: "DRAFT" } }),
     prisma.requirement.count({ where: { status: "SUBMITTED" } }),
+    prisma.user.count({
+      where: {
+        role: "CUSTOMER",
+        pricingFormId: null,
+        pricingQuote: null,
+        requirement: { status: "SUBMITTED" },
+      },
+    }),
     prisma.requirement.findMany({
       orderBy: { updatedAt: "desc" },
-      include: { user: { select: { email: true, name: true } } },
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+            pricingForm: { select: { title: true } },
+            pricingQuote: { select: { id: true } },
+          },
+        },
+      },
     }),
   ]);
 
   return NextResponse.json({
-    stats: { users, drafts, submitted },
+    stats: { users, drafts, submitted, awaitingForm },
     submissions: rows.map((row) => {
       const data = mergeRequirement(JSON.parse(row.data));
       return {
@@ -35,6 +52,8 @@ export async function GET() {
         completionPercent: row.totalPrice,
         submittedAt: row.submittedAt,
         updatedAt: row.updatedAt,
+        pricingFormTitle: row.user.pricingForm?.title ?? null,
+        quoteId: row.user.pricingQuote?.id ?? null,
       };
     }),
   });

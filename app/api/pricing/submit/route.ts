@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { calculatePricing, pricingConfigError, totalPriceError } from "@/lib/pricing";
-import { findQuoteForUser, loadPricingForm, serializeQuote } from "@/lib/pricing-service";
+import { notifyAdmins } from "@/lib/notifications";
+import {
+  PRICING_FORM_PENDING_MESSAGE,
+  calculatePricing,
+  pricingConfigError,
+  totalPriceError,
+} from "@/lib/pricing";
+import { findQuoteForUser, loadAssignedPricingForm, serializeQuote } from "@/lib/pricing-service";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -28,11 +34,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const requirement = await prisma.requirement.findUnique({
-    where: { userId: session.sub },
-    select: { status: true },
+  const user = await prisma.user.findUnique({
+    where: { id: session.sub },
+    select: { pricingFormId: true, requirement: { select: { status: true } } },
   });
-  if (requirement?.status !== "SUBMITTED") {
+  if (user?.requirement?.status !== "SUBMITTED") {
     return NextResponse.json(
       {
         error: "ابتدا فرم نیازمندی‌ها را ثبت نهایی کنید.",
@@ -54,7 +60,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const sections = await loadPricingForm();
+  if (!user.pricingFormId) {
+    return NextResponse.json(
+      { error: PRICING_FORM_PENDING_MESSAGE, formAssigned: false },
+      { status: 409 },
+    );
+  }
+
+  const sections = await loadAssignedPricingForm(user.pricingFormId);
   const configError = pricingConfigError(sections);
   if (configError) {
     return NextResponse.json({ error: configError, configError }, { status: 409 });
@@ -88,6 +101,8 @@ export async function POST(request: Request) {
       },
       include: { items: true },
     });
+
+    await notifyAdmins("PRICING_SUBMITTED", session.sub);
 
     return NextResponse.json({ ok: true, quote: serializeQuote(quote) });
   } catch (error) {

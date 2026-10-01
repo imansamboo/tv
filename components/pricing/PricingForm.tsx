@@ -7,11 +7,16 @@ import { PriceSummary } from "@/components/pricing/PriceSummary";
 import { BaseItemCard, OptionalItemCard } from "@/components/pricing/PricingItemCard";
 import { PricingResult } from "@/components/pricing/PricingResult";
 import { PrimaryButton } from "@/components/ui";
-import { calculatePricing, type PricingSectionView } from "@/lib/pricing";
+import {
+  PRICING_FORM_PENDING_MESSAGE,
+  calculatePricing,
+  type PricingSectionView,
+} from "@/lib/pricing";
 import type { PricingQuoteView } from "@/lib/pricing-service";
 
 type FormPayload = {
   requirementSubmitted: boolean;
+  formAssigned: boolean;
   configError: string | null;
   sections: PricingSectionView[];
   quote: PricingQuoteView | null;
@@ -52,6 +57,24 @@ function Notice({ tone, children }: { tone: "info" | "warn"; children: React.Rea
       ? "border-rose-400/30 bg-rose-400/10 text-rose-200"
       : "border-amber-400/30 bg-amber-400/10 text-amber-200";
   return <div className={`rounded-2xl border px-4 py-3 text-sm ${toneClass}`}>{children}</div>;
+}
+
+export function PricingFormPending() {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-[#101826]/80 p-5 sm:p-8">
+      <Notice tone="info">{PRICING_FORM_PENDING_MESSAGE}</Notice>
+      <p className="mt-4 text-sm leading-7 text-white/60">
+        تیم ما در حال بررسی نیازمندی‌های فروشگاه شماست تا فرم قیمت‌گذاری مخصوص شما را آماده کند.
+        لطفاً بعداً دوباره به این صفحه سر بزنید.
+      </p>
+      <Link
+        href="/form"
+        className="mt-4 inline-block rounded-2xl border border-white/15 px-4 py-2 text-sm font-bold"
+      >
+        مشاهده نیازمندی‌های ثبت‌شده
+      </Link>
+    </section>
+  );
 }
 
 export function PricingForm() {
@@ -136,6 +159,10 @@ export function PricingForm() {
           router.replace("/form");
           return;
         }
+        if (result.formAssigned === false) {
+          setPayload((current) => (current ? { ...current, formAssigned: false } : current));
+          return;
+        }
         setError(result.error || "ثبت فرم قیمت‌گذاری ممکن نشد.");
         return;
       }
@@ -180,6 +207,10 @@ export function PricingForm() {
         </div>
       </div>
     );
+  }
+
+  if (payload && !payload.formAssigned) {
+    return <PricingFormPending />;
   }
 
   if (payload?.configError) {
