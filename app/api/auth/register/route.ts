@@ -3,12 +3,13 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { cookieOptions, signSession, SESSION_COOKIE } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { emptyRequirement } from "@/lib/form";
+import { initialRequirement, loadBusinessForm } from "@/lib/business";
 
 const schema = z.object({
   name: z.string().trim().min(3, "نام را کامل وارد کنید."),
   email: z.string().trim().toLowerCase().email("ایمیل معتبر نیست."),
   password: z.string().min(6, "رمز عبور حداقل ۶ کاراکتر باشد."),
+  businessId: z.string({ error: "کسب‌وکار خود را انتخاب کنید." }).trim().min(1, "کسب‌وکار خود را انتخاب کنید."),
 });
 
 export async function POST(request: Request) {
@@ -21,7 +22,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, password } = parsed.data;
+  const { name, email, password, businessId } = parsed.data;
+  const business = await loadBusinessForm(businessId, { activeOnly: true });
+  if (!business) {
+    return NextResponse.json({ error: "کسب‌وکار انتخاب‌شده معتبر نیست." }, { status: 400 });
+  }
+
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) {
     return NextResponse.json(
@@ -35,10 +41,9 @@ export async function POST(request: Request) {
       name,
       email,
       passwordHash: await bcrypt.hash(password, 10),
+      businessId: business.business.id,
       requirement: {
-        create: {
-          data: JSON.stringify(emptyRequirement()),
-        },
+        create: initialRequirement(business.form, name).columns,
       },
     },
   });

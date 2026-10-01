@@ -1,4 +1,4 @@
-import { customerNames } from "./customer";
+import { customerNames, customerRequirementSelect } from "./customer";
 import { calculatePricing, pricingConfigError, type PricingSectionView } from "./pricing";
 import { loadPricingForm } from "./pricing-service";
 import { prisma } from "./prisma";
@@ -29,7 +29,7 @@ const userSelect = {
   email: true,
   name: true,
   pricingFormAssignedAt: true,
-  requirement: { select: { data: true } },
+  requirement: { select: customerRequirementSelect },
   pricingQuote: { select: { id: true } },
 } as const;
 
@@ -38,7 +38,7 @@ function toFormUser(user: {
   email: string;
   name: string | null;
   pricingFormAssignedAt: Date | null;
-  requirement: { data: string } | null;
+  requirement: { contactName: string | null; storeName: string | null } | null;
   pricingQuote: { id: string } | null;
 }): PricingFormUser {
   return {

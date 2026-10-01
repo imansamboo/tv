@@ -1,5 +1,8 @@
 import { PrismaClient, type PricingItemKind } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { TV_BUSINESS_ID, TV_BUSINESS_NAME, TV_REQUIREMENT_FORM } from "../lib/business-seed";
+import { customerInfo, normalizeRequirement } from "../lib/form";
+import { convertLegacyRequirement, isLegacyRequirement } from "../lib/legacy-requirement";
 
 const prisma = new PrismaClient();
 
@@ -135,6 +138,64 @@ async function seedPricingForm() {
   }
 }
 
+async function seedTvBusiness() {
+  await prisma.business.upsert({
+    where: { id: TV_BUSINESS_ID },
+    update: {},
+    create: {
+      id: TV_BUSINESS_ID,
+      name: TV_BUSINESS_NAME,
+      description: "فروشگاه اینترنتی تلویزیون و کالای دیجیتال",
+      sortOrder: 0,
+      form: JSON.stringify(TV_REQUIREMENT_FORM),
+    },
+  });
+}
+
+/**
+ * Customers registered before businesses existed filled the hard-coded TV
+ * form, so they are moved to the TV business and their answers converted.
+ */
+async function migrateLegacyCustomers() {
+  await prisma.user.updateMany({
+    where: { role: "CUSTOMER", businessId: null },
+    data: { businessId: TV_BUSINESS_ID },
+  });
+
+  const formJson = JSON.stringify(TV_REQUIREMENT_FORM);
+  const requirements = await prisma.requirement.findMany({
+    where: { user: { businessId: TV_BUSINESS_ID } },
+  });
+  for (const requirement of requirements) {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(requirement.data);
+    } catch {
+      raw = {};
+    }
+    const legacy = isLegacyRequirement(raw);
+    if (!legacy && requirement.contactName !== null) continue;
+
+    const data = normalizeRequirement(
+      legacy ? convertLegacyRequirement(raw as Record<string, unknown>) : raw,
+      TV_REQUIREMENT_FORM,
+    );
+    const info = customerInfo(TV_REQUIREMENT_FORM, data);
+    const submitted = requirement.status === "SUBMITTED";
+    await prisma.requirement.update({
+      where: { id: requirement.id },
+      data: {
+        data: JSON.stringify(data),
+        contactName: info.contactName,
+        storeName: info.storeName,
+        city: info.city,
+        formSnapshot: submitted ? (requirement.formSnapshot ?? formJson) : requirement.formSnapshot,
+        currentStep: Math.min(requirement.currentStep, TV_REQUIREMENT_FORM.steps.length),
+      },
+    });
+  }
+}
+
 async function main() {
   const passwordHash = await bcrypt.hash("Admin1234!", 10);
   await prisma.user.upsert({
@@ -149,6 +210,8 @@ async function main() {
   });
 
   await seedPricingForm();
+  await seedTvBusiness();
+  await migrateLegacyCustomers();
 }
 
 main()

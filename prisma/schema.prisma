@@ -43,23 +43,50 @@ model User {
   pricingForm           PricingForm?        @relation(fields: [pricingFormId], references: [id], onDelete: SetNull)
   pricingFormAssignedAt DateTime?
   notifications         AdminNotification[]
+  /// Chosen at registration; decides which requirements form the customer fills.
+  businessId            String?
+  business              Business?           @relation(fields: [businessId], references: [id], onDelete: Restrict)
 
   @@index([pricingFormId])
+  @@index([businessId])
+}
+
+/// A kind of business (e.g. digital goods / TV) with its own requirements form.
+model Business {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  /// Customers can only pick active businesses when registering.
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  /// JSON `RequirementForm` (steps → fields → options) edited in the admin panel.
+  form        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
 }
 
 model Requirement {
-  id            String     @id @default(cuid())
-  userId        String     @unique
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status        FormStatus @default(DRAFT)
-  currentStep   Int        @default(0)
-  data          String
-  tvPrice       Int        @default(0)
-  extrasPrice   Int        @default(0)
-  totalPrice    Int        @default(0)
-  submittedAt   DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id           String     @id @default(cuid())
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       FormStatus @default(DRAFT)
+  currentStep  Int        @default(0)
+  /// JSON `RequirementData`: answers keyed by field key plus "other" texts.
+  data         String
+  /// Copy of the business form at submission time, so later edits to the form
+  /// never change how a submitted requirement is displayed.
+  formSnapshot String?
+  /// Denormalized from the fields with a contact / store / city role for lists.
+  contactName  String?
+  storeName    String?
+  city         String?
+  tvPrice      Int        @default(0)
+  extrasPrice  Int        @default(0)
+  totalPrice   Int        @default(0)
+  submittedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model CampaignLead {

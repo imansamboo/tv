@@ -1,5 +1,3 @@
-import { BUSINESS_TYPES, EXISTING_WEBSITE, labelWithOther } from "@/lib/catalog";
-import type { RequirementData } from "@/lib/form";
 import type { RequirementSummary } from "@/lib/summary";
 
 function SummaryField({
@@ -18,12 +16,12 @@ function SummaryField({
 }
 
 export function RequirementsSummary({
-  data,
   summary,
+  businessName,
   compact = false,
 }: {
-  data: RequirementData;
   summary: RequirementSummary;
+  businessName?: string;
   compact?: boolean;
 }) {
   return (
@@ -35,10 +33,8 @@ export function RequirementsSummary({
         </SummaryField>
         {!compact && (
           <>
+            {businessName && <SummaryField label="کسب‌وکار">{businessName}</SummaryField>}
             <SummaryField label="امکانات انتخاب‌شده">{summary.featureCount}</SummaryField>
-            <SummaryField label="نوع فعالیت">
-              {labelWithOther(data.businessType, BUSINESS_TYPES, data.businessTypeOther) || "—"}
-            </SummaryField>
           </>
         )}
         {summary.highlights.length === 0 ? (
@@ -51,15 +47,6 @@ export function RequirementsSummary({
               {item.value}
             </SummaryField>
           ))
-        )}
-        {data.existingWebsite && (
-          <SummaryField label="وب‌سایت فعلی">
-            {labelWithOther(
-              data.existingWebsite,
-              EXISTING_WEBSITE,
-              data.existingWebsiteOther,
-            )}
-          </SummaryField>
         )}
       </div>
     </aside>

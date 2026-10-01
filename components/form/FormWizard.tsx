@@ -2,132 +2,89 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RequirementsSummary } from "@/components/RequirementsSummary";
+import { BusinessPicker } from "@/components/form/BusinessPicker";
 import { ReviewPanel } from "@/components/form/ReviewPanel";
-import {
-  Field,
-  fieldClass,
-  optionGridClass,
-  OptionButton,
-  PrimaryButton,
-} from "@/components/ui";
-import {
-  ADMIN_FEATURES,
-  BRANDS,
-  BUSINESS_TYPES,
-  BUYER_FEATURES,
-  CITIES,
-  DELIVERY_METHODS,
-  DESIGN_STYLES,
-  EXISTING_WEBSITE,
-  INVENTORY_SOURCE,
-  OTHER_OPTION,
-  PAYMENT_GATEWAYS,
-  PRODUCT_VOLUME,
-  SIZE_RANGES,
-} from "@/lib/catalog";
+import { StepFields } from "@/components/form/StepFields";
+import { PrimaryButton } from "@/components/ui";
+import type { BusinessOption } from "@/lib/business";
 import { cn } from "@/lib/cn";
-import {
-  FORM_SECTION_HINTS,
-  FORM_STEPS,
-  MULTI_SELECT_HINT,
-  OTHER_ID,
-  SINGLE_SELECT_HINT,
-  emptyRequirement,
-  hasOtherSelected,
-  toggleInList,
-  type RequirementData,
-} from "@/lib/form";
+import { REVIEW_STEP, type RequirementData, type RequirementForm } from "@/lib/form";
 import { PRICING_FORM_PENDING_MESSAGE } from "@/lib/pricing";
-import { summarizeRequirements, type RequirementSummary } from "@/lib/summary";
+import { summarizeRequirements } from "@/lib/summary";
 import { validateStep } from "@/lib/validate";
 
-type FormPayload = {
-  status: "DRAFT" | "SUBMITTED";
-  currentStep: number;
-  data: RequirementData;
-  summary: RequirementSummary;
-  submittedAt: string | null;
-  pricingFormAssigned: boolean;
-  userName?: string;
-};
+type FormPayload =
+  | { error: string }
+  | { needsBusiness: true; businesses: BusinessOption[] }
+  | {
+      business: { id: string; name: string };
+      form: RequirementForm;
+      status: "DRAFT" | "SUBMITTED";
+      currentStep: number;
+      data: RequirementData;
+      submittedAt: string | null;
+      pricingFormAssigned: boolean;
+    };
 
-const OTHER_TEXT_FIELDS = [
-  "businessTypeOther",
-  "existingWebsiteOther",
-  "brandsOther",
-  "sizeRangesOther",
-  "productVolumeOther",
-  "inventorySourceOther",
-  "buyerFeaturesOther",
-  "paymentGatewaysOther",
-  "deliveryMethodsOther",
-  "adminFeaturesOther",
-  "designStyleOther",
-  "contactName",
-  "storeName",
-  "storeDescription",
-  "buyerNotes",
-  "servicesNotes",
-  "adminNotes",
-  "referenceSites",
-  "designNotes",
-] as const;
+type Loaded = {
+  business: { id: string; name: string };
+  form: RequirementForm;
+  pricingFormAssigned: boolean;
+};
 
 export function FormWizard() {
   const router = useRouter();
+  const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [businesses, setBusinesses] = useState<BusinessOption[] | null>(null);
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [status, setStatus] = useState<"DRAFT" | "SUBMITTED">("DRAFT");
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<RequirementData>(emptyRequirement);
+  const [data, setData] = useState<RequirementData>({ values: {}, other: {} });
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
-  const [pricingFormAssigned, setPricingFormAssigned] = useState(false);
 
-  const formRef = useRef<HTMLFormElement>(null);
-  const summary = useMemo(() => summarizeRequirements(data), [data]);
+  const form = loaded?.form;
+  const summary = useMemo(() => (form ? summarizeRequirements(form, data) : null), [form, data]);
   const locked = status === "SUBMITTED";
-  const lastStep = FORM_STEPS.length - 1;
-
-  function collectFromDom(current: RequirementData): RequirementData {
-    const form = formRef.current;
-    if (!form) return current;
-    const fd = new FormData(form);
-    const next = { ...current };
-    for (const key of OTHER_TEXT_FIELDS) {
-      const value = fd.get(key);
-      if (typeof value === "string") next[key] = value;
-    }
-    return next;
-  }
-
-  const patch = useCallback((partial: Partial<RequirementData>) => {
-    setData((current) => ({ ...current, ...partial }));
-  }, []);
+  const reviewStep = form?.steps.length ?? 0;
 
   useEffect(() => {
     fetch("/api/form")
       .then((res) => res.json())
       .then((payload: FormPayload) => {
-        setStatus(payload.status);
-        const submitted = payload.status === "SUBMITTED";
-        setStep(submitted ? FORM_STEPS.length - 1 : (payload.currentStep ?? 0));
-        const incoming = payload.data;
-        if (!incoming.contactName && payload.userName) {
-          incoming.contactName = payload.userName;
+        if ("error" in payload) {
+          setLoadError(payload.error);
+          return;
         }
-        setData(incoming);
+        if ("needsBusiness" in payload) {
+          setBusinesses(payload.businesses);
+          setLoaded(null);
+          return;
+        }
+        const submitted = payload.status === "SUBMITTED";
+        setBusinesses(null);
+        setLoaded({
+          business: payload.business,
+          form: payload.form,
+          pricingFormAssigned: payload.pricingFormAssigned,
+        });
+        setStatus(payload.status);
+        setStep(submitted ? payload.form.steps.length : (payload.currentStep ?? 0));
+        setData(payload.data);
         setSubmittedAt(payload.submittedAt);
-        setPricingFormAssigned(payload.pricingFormAssigned);
       })
+      .catch(() => setLoadError("بارگذاری فرم ممکن نشد."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
-    if (loading || locked) return;
+    if (loading || locked || !loaded) return;
     const timer = setTimeout(async () => {
       setSaving(true);
       const res = await fetch("/api/form", {
@@ -139,33 +96,47 @@ export function FormWizard() {
       setSaving(false);
     }, 500);
     return () => clearTimeout(timer);
-  }, [data, step, loading, locked]);
+  }, [data, step, loading, locked, loaded]);
+
+  if (loading) {
+    return <p className="py-20 text-center text-white/60">در حال بارگذاری فرم...</p>;
+  }
+  if (loadError) {
+    return <p className="py-20 text-center text-rose-400">{loadError}</p>;
+  }
+  if (businesses) {
+    return (
+      <BusinessPicker
+        businesses={businesses}
+        onSelected={() => {
+          setLoading(true);
+          setReloadKey((key) => key + 1);
+        }}
+      />
+    );
+  }
+  if (!loaded || !form || !summary) return null;
+
+  const steps = [...form.steps.map((s) => ({ title: s.title, description: s.description })), REVIEW_STEP];
+  const current = steps[step] ?? REVIEW_STEP;
 
   function goNext() {
-    const nextData = collectFromDom(data);
-    setData(nextData);
-    const message = validateStep(step, nextData);
+    if (!form) return;
+    const message = validateStep(form, step, data);
     if (message) {
       setError(message);
       return;
     }
     setError("");
-    setStep((value) => Math.min(lastStep, value + 1));
+    setStep((value) => Math.min(reviewStep, value + 1));
   }
 
   async function submit() {
-    const nextData = collectFromDom(data);
-    setData(nextData);
-    const message = validateStep(step, nextData);
-    if (message) {
-      setError(message);
-      return;
-    }
     setError("");
     const saveRes = await fetch("/api/form", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: nextData, currentStep: step }),
+      body: JSON.stringify({ data, currentStep: step }),
     });
     if (!saveRes.ok) {
       const payload = await saveRes.json();
@@ -180,22 +151,21 @@ export function FormWizard() {
       return;
     }
     setStatus("SUBMITTED");
-    setStep(lastStep);
+    setStep(reviewStep);
     if (payload.submittedAt) setSubmittedAt(payload.submittedAt);
     router.refresh();
-  }
-
-  if (loading) {
-    return <p className="py-20 text-center text-white/60">در حال بارگذاری فرم...</p>;
   }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <section className="rounded-3xl border border-white/10 bg-[#101826]/80 p-5 sm:p-8">
         {!locked && (
-          <ol className="mb-8 grid grid-cols-7 gap-2">
-            {FORM_STEPS.map((item, index) => (
-              <li key={item.title}>
+          <ol
+            className="mb-8 grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+          >
+            {steps.map((item, index) => (
+              <li key={index}>
                 <button
                   type="button"
                   onClick={() => setStep(index)}
@@ -221,7 +191,7 @@ export function FormWizard() {
             <p>
               این نیازمندی‌ها در {submittedAt ? new Date(submittedAt).toLocaleString("fa-IR") : "گذشته"} ثبت نهایی شده و دیگر قابل ویرایش نیست.
             </p>
-            {pricingFormAssigned ? (
+            {loaded.pricingFormAssigned ? (
               <Link
                 href="/pricing"
                 className="inline-block rounded-2xl bg-amber-400 px-4 py-2 text-xs font-bold text-black"
@@ -236,490 +206,16 @@ export function FormWizard() {
           </div>
         )}
 
-        <form ref={formRef} onSubmit={(event) => event.preventDefault()}>
+        <form onSubmit={(event) => event.preventDefault()}>
           <div className="mb-6">
-            <p className="text-amber-300">{FORM_STEPS[step].desc}</p>
-            <h2 className="mt-1 text-2xl font-black">{FORM_STEPS[step].title}</h2>
+            {current.description && <p className="text-amber-300">{current.description}</p>}
+            <h2 className="mt-1 text-2xl font-black">{current.title}</h2>
           </div>
 
-          {step === 0 && (
-            <div className="grid gap-6">
-              <Field label="نام رابط فروشگاه *" hint={FORM_SECTION_HINTS.contactName}>
-                <input
-                  name="contactName"
-                  className={fieldClass}
-                  value={data.contactName}
-                  disabled={locked}
-                  placeholder="مثلاً علی محمدی"
-                  onChange={(event) => patch({ contactName: event.target.value })}
-                />
-              </Field>
-              <Field label="نام فروشگاه *" hint={FORM_SECTION_HINTS.storeName}>
-                <input
-                  name="storeName"
-                  className={fieldClass}
-                  value={data.storeName}
-                  disabled={locked}
-                  placeholder="مثلاً فریمان الکترونیک"
-                  onChange={(event) => patch({ storeName: event.target.value })}
-                />
-              </Field>
-              <OptionSection
-                label="نوع فعالیت *"
-                hint={FORM_SECTION_HINTS.businessType}
-                selectionHint={SINGLE_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {BUSINESS_TYPES.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.businessType === item.id}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() => !locked && patch({ businessType: item.id })}
-                  />
-                ))}
-              </div>
-              {data.businessType === OTHER_ID && (
-                <OtherTextField
-                  name="businessTypeOther"
-                  value={data.businessTypeOther}
-                  disabled={locked}
-                  placeholder="نوع فعالیت خود را بنویسید"
-                  onChange={(value) => patch({ businessTypeOther: value })}
-                />
-              )}
-              <Field label="شهر فعالیت *" hint={FORM_SECTION_HINTS.city}>
-                <select
-                  name="city"
-                  className={fieldClass}
-                  value={data.city}
-                  disabled={locked}
-                  onChange={(event) => patch({ city: event.target.value })}
-                >
-                  {CITIES.map((city) => (
-                    <option key={city.id} value={city.id}>
-                      {city.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <OptionSection
-                label="وضعیت وب‌سایت فعلی *"
-                hint={FORM_SECTION_HINTS.existingWebsite}
-                selectionHint={SINGLE_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {EXISTING_WEBSITE.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.existingWebsite === item.id}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() => !locked && patch({ existingWebsite: item.id })}
-                  />
-                ))}
-              </div>
-              {data.existingWebsite === OTHER_ID && (
-                <OtherTextField
-                  name="existingWebsiteOther"
-                  value={data.existingWebsiteOther}
-                  disabled={locked}
-                  placeholder="وضعیت سایت فعلی خود را توضیح دهید"
-                  onChange={(value) => patch({ existingWebsiteOther: value })}
-                />
-              )}
-              <Field label="توضیح کوتاه درباره فروشگاه" hint={FORM_SECTION_HINTS.storeDescription}>
-                <textarea
-                  name="storeDescription"
-                  className={`${fieldClass} min-h-24`}
-                  value={data.storeDescription}
-                  disabled={locked}
-                  placeholder="چند سال است فروش تلویزیون می‌کنید؟ مشتری‌های شما بیشتر حضوری می‌خرند یا آنلاین؟"
-                  onChange={(event) => patch({ storeDescription: event.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="space-y-6">
-              <OptionSection
-                label="برندها *"
-                hint={FORM_SECTION_HINTS.brands}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {BRANDS.map((brand) => (
-                  <OptionButton
-                    key={brand.id}
-                    selected={data.brandsToSell.includes(brand.id)}
-                    title={brand.label}
-                    subtitle={"hint" in brand ? brand.hint : undefined}
-                    onClick={() =>
-                      !locked &&
-                      patch({ brandsToSell: toggleInList(data.brandsToSell, brand.id) })
-                    }
-                  />
-                ))}
-              </div>
-              {hasOtherSelected(data.brandsToSell) && (
-                <OtherTextField
-                  name="brandsOther"
-                  value={data.brandsOther}
-                  disabled={locked}
-                  placeholder="برندهای دیگری که می‌فروشید"
-                  onChange={(value) => patch({ brandsOther: value })}
-                />
-              )}
-              <OptionSection
-                label="بازه سایز *"
-                hint={FORM_SECTION_HINTS.sizeRanges}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {SIZE_RANGES.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.sizeRanges.includes(item.id)}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() =>
-                      !locked && patch({ sizeRanges: toggleInList(data.sizeRanges, item.id) })
-                    }
-                  />
-                ))}
-              </div>
-              {hasOtherSelected(data.sizeRanges) && (
-                <OtherTextField
-                  name="sizeRangesOther"
-                  value={data.sizeRangesOther}
-                  disabled={locked}
-                  placeholder="بازه سایز دلخواه خود را بنویسید"
-                  onChange={(value) => patch({ sizeRangesOther: value })}
-                />
-              )}
-              <OptionSection
-                label="تعداد مدل *"
-                hint={FORM_SECTION_HINTS.productVolume}
-                selectionHint={SINGLE_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {PRODUCT_VOLUME.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.productVolume === item.id}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() => !locked && patch({ productVolume: item.id })}
-                  />
-                ))}
-              </div>
-              {data.productVolume === OTHER_ID && (
-                <OtherTextField
-                  name="productVolumeOther"
-                  value={data.productVolumeOther}
-                  disabled={locked}
-                  placeholder="حجم تقریبی کاتالوگ خود را بنویسید"
-                  onChange={(value) => patch({ productVolumeOther: value })}
-                />
-              )}
-              <OptionSection
-                label="ورود محصولات *"
-                hint={FORM_SECTION_HINTS.inventorySource}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {INVENTORY_SOURCE.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.inventorySources.includes(item.id)}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() =>
-                      !locked &&
-                      patch({
-                        inventorySources: toggleInList(data.inventorySources, item.id),
-                      })
-                    }
-                  />
-                ))}
-              </div>
-              {hasOtherSelected(data.inventorySources) && (
-                <OtherTextField
-                  name="inventorySourceOther"
-                  value={data.inventorySourceOther}
-                  disabled={locked}
-                  placeholder="نحوه ورود محصولات را توضیح دهید"
-                  onChange={(value) => patch({ inventorySourceOther: value })}
-                />
-              )}
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-6">
-              <OptionSection
-                label="امکانات تجربه خرید *"
-                hint={FORM_SECTION_HINTS.buyerFeatures}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {BUYER_FEATURES.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.buyerFeatures.includes(item.id)}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() =>
-                      !locked &&
-                      patch({ buyerFeatures: toggleInList(data.buyerFeatures, item.id) })
-                    }
-                  />
-                ))}
-              </div>
-              {hasOtherSelected(data.buyerFeatures) && (
-                <OtherTextField
-                  name="buyerFeaturesOther"
-                  value={data.buyerFeaturesOther}
-                  disabled={locked}
-                  placeholder="امکانات دیگری که برای مشتری می‌خواهید"
-                  onChange={(value) => patch({ buyerFeaturesOther: value })}
-                />
-              )}
-              <Field label="توضیحات بیشتر درباره تجربه خرید" hint={FORM_SECTION_HINTS.buyerNotes}>
-                <textarea
-                  name="buyerNotes"
-                  className={`${fieldClass} min-h-24`}
-                  value={data.buyerNotes}
-                  disabled={locked}
-                  placeholder="مثلاً می‌خواهم مشتری قبل از پرداخت هزینه ارسال و نصب را ببیند"
-                  onChange={(event) => patch({ buyerNotes: event.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-6">
-              <OptionSection
-                label="درگاه پرداخت *"
-                hint={FORM_SECTION_HINTS.paymentGateways}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {PAYMENT_GATEWAYS.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.paymentGateways.includes(item.id)}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() =>
-                      !locked &&
-                      patch({ paymentGateways: toggleInList(data.paymentGateways, item.id) })
-                    }
-                  />
-                ))}
-              </div>
-              {hasOtherSelected(data.paymentGateways) && (
-                <OtherTextField
-                  name="paymentGatewaysOther"
-                  value={data.paymentGatewaysOther}
-                  disabled={locked}
-                  placeholder="روش پرداخت دیگری که می‌خواهید"
-                  onChange={(value) => patch({ paymentGatewaysOther: value })}
-                />
-              )}
-              <OptionSection
-                label="روش ارسال *"
-                hint={FORM_SECTION_HINTS.deliveryMethods}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {DELIVERY_METHODS.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.deliveryMethods.includes(item.id)}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() =>
-                      !locked &&
-                      patch({ deliveryMethods: toggleInList(data.deliveryMethods, item.id) })
-                    }
-                  />
-                ))}
-              </div>
-              {hasOtherSelected(data.deliveryMethods) && (
-                <OtherTextField
-                  name="deliveryMethodsOther"
-                  value={data.deliveryMethodsOther}
-                  disabled={locked}
-                  placeholder="روش ارسال دیگری که می‌خواهید"
-                  onChange={(value) => patch({ deliveryMethodsOther: value })}
-                />
-              )}
-              <OptionSection
-                label="خدمات هنگام خرید"
-                hint={FORM_SECTION_HINTS.serviceToggles}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                <OptionButton
-                  selected={data.installationOnSite}
-                  title="سفارش نصب در محل"
-                  subtitle="مشتری هنگام خرید نصب دیواری را انتخاب کند"
-                  onClick={() => !locked && patch({ installationOnSite: !data.installationOnSite })}
-                />
-                <OptionButton
-                  selected={data.warrantyDisplay}
-                  title="نمایش گارانتی"
-                  subtitle="گارانتی شرکتی و طلایی روی سایت"
-                  onClick={() => !locked && patch({ warrantyDisplay: !data.warrantyDisplay })}
-                />
-                <OptionButton
-                  selected={data.transparentCheckout}
-                  title="شفافیت قبل از پرداخت"
-                  subtitle="همه هزینه‌ها قبل از درگاه دیده شود"
-                  onClick={() => !locked && patch({ transparentCheckout: !data.transparentCheckout })}
-                />
-              </div>
-              <Field label="توضیحات خدمات و ارسال" hint={FORM_SECTION_HINTS.servicesNotes}>
-                <textarea
-                  name="servicesNotes"
-                  className={`${fieldClass} min-h-24`}
-                  value={data.servicesNotes}
-                  disabled={locked}
-                  placeholder="مثلاً ارسال داخل منزل فقط برای ۶۵ اینچ به بالا"
-                  onChange={(event) => patch({ servicesNotes: event.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-6">
-              <OptionSection
-                label="ابزارهای پنل مدیریت *"
-                hint={FORM_SECTION_HINTS.adminFeatures}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {ADMIN_FEATURES.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.adminFeatures.includes(item.id)}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() =>
-                      !locked &&
-                      patch({ adminFeatures: toggleInList(data.adminFeatures, item.id) })
-                    }
-                  />
-                ))}
-              </div>
-              {hasOtherSelected(data.adminFeatures) && (
-                <OtherTextField
-                  name="adminFeaturesOther"
-                  value={data.adminFeaturesOther}
-                  disabled={locked}
-                  placeholder="ابزار مدیریتی دیگری که نیاز دارید"
-                  onChange={(value) => patch({ adminFeaturesOther: value })}
-                />
-              )}
-              <Field label="نیازهای دیگر در پنل مدیریت" hint={FORM_SECTION_HINTS.adminNotes}>
-                <textarea
-                  name="adminNotes"
-                  className={`${fieldClass} min-h-24`}
-                  value={data.adminNotes}
-                  disabled={locked}
-                  placeholder="مثلاً خروجی اکسل سفارش‌ها یا اتصال به پیامک"
-                  onChange={(event) => patch({ adminNotes: event.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="space-y-6">
-              <OptionSection
-                label="سبک طراحی *"
-                hint={FORM_SECTION_HINTS.designStyle}
-                selectionHint={SINGLE_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                {DESIGN_STYLES.map((item) => (
-                  <OptionButton
-                    key={item.id}
-                    selected={data.designStyle === item.id}
-                    title={item.label}
-                    subtitle={"hint" in item ? item.hint : undefined}
-                    onClick={() => !locked && patch({ designStyle: item.id })}
-                  />
-                ))}
-              </div>
-              {data.designStyle === OTHER_ID && (
-                <OtherTextField
-                  name="designStyleOther"
-                  value={data.designStyleOther}
-                  disabled={locked}
-                  placeholder="سبک طراحی دلخواه خود را بنویسید"
-                  onChange={(value) => patch({ designStyleOther: value })}
-                />
-              )}
-              <Field label="سایت‌های مرجع" hint={FORM_SECTION_HINTS.referenceSites}>
-                <textarea
-                  name="referenceSites"
-                  className={`${fieldClass} min-h-20`}
-                  value={data.referenceSites}
-                  disabled={locked}
-                  placeholder="مثلاً دیجی‌کالا، تکنولایف، سامسونگ ایران"
-                  onChange={(event) => patch({ referenceSites: event.target.value })}
-                />
-              </Field>
-              <OptionSection
-                label="دارایی‌های برند"
-                hint={FORM_SECTION_HINTS.designAssets}
-                selectionHint={MULTI_SELECT_HINT}
-              />
-              <div className={optionGridClass}>
-                <OptionButton
-                  selected={data.hasLogo}
-                  title="لوگو آماده دارم"
-                  onClick={() => !locked && patch({ hasLogo: !data.hasLogo })}
-                />
-                <OptionButton
-                  selected={data.hasBrandGuide}
-                  title="راهنمای برند دارم"
-                  subtitle="رنگ، فونت یا هویت بصری"
-                  onClick={() => !locked && patch({ hasBrandGuide: !data.hasBrandGuide })}
-                />
-                <OptionButton
-                  selected={data.darkMode}
-                  title="تم تیره"
-                  onClick={() => !locked && patch({ darkMode: !data.darkMode })}
-                />
-                <OptionButton
-                  selected={data.mobileFirst}
-                  title="اولویت موبایل"
-                  subtitle="بیشتر مشتریان از گوشی می‌خرند"
-                  onClick={() => !locked && patch({ mobileFirst: !data.mobileFirst })}
-                />
-              </div>
-              <Field label="توضیحات طراحی" hint={FORM_SECTION_HINTS.designNotes}>
-                <textarea
-                  name="designNotes"
-                  className={`${fieldClass} min-h-24`}
-                  value={data.designNotes}
-                  disabled={locked}
-                  placeholder="هر نکته‌ای که برای ظاهر سایت مهم است"
-                  onChange={(event) => patch({ designNotes: event.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-
-          {step === 6 && (
-            <ReviewPanel data={data} completionPercent={summary.completionPercent} />
+          {step < reviewStep ? (
+            <StepFields step={form.steps[step]} data={data} disabled={locked} onChange={setData} />
+          ) : (
+            <ReviewPanel form={form} data={data} completionPercent={summary.completionPercent} />
           )}
 
           {error && <p className="mt-5 text-sm text-rose-400">{error}</p>}
@@ -744,7 +240,7 @@ export function FormWizard() {
                     ? "پیش‌نویس ذخیره شد؛ بعداً می‌توانید ادامه دهید."
                     : ""}
               </div>
-              {step < lastStep ? (
+              {step < reviewStep ? (
                 <PrimaryButton type="button" onClick={goNext}>
                   ادامه
                 </PrimaryButton>
@@ -758,56 +254,8 @@ export function FormWizard() {
         </form>
       </section>
       <div className="lg:sticky lg:top-24 lg:self-start">
-        <RequirementsSummary data={data} summary={summary} />
+        <RequirementsSummary summary={summary} businessName={loaded.business.name} />
       </div>
     </div>
   );
 }
-
-function OptionSection({
-  label,
-  hint,
-  selectionHint,
-}: {
-  label: string;
-  hint: string;
-  selectionHint: string;
-}) {
-  return (
-    <div className="space-y-1">
-      <p className="text-sm font-medium text-white/85">
-        {label}
-        <span className="font-normal text-white/45"> ({hint})</span>
-      </p>
-      <p className="text-xs text-white/40">{selectionHint}</p>
-    </div>
-  );
-}
-
-function OtherTextField({
-  name,
-  value,
-  disabled,
-  placeholder,
-  onChange,
-}: {
-  name: string;
-  value: string;
-  disabled: boolean;
-  placeholder: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Field label={`${OTHER_OPTION.label} *`} hint={OTHER_OPTION.hint}>
-      <input
-        name={name}
-        className={fieldClass}
-        value={value}
-        disabled={disabled}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </Field>
-  );
-}
-

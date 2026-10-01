@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { RequirementsSummary } from "@/components/RequirementsSummary";
-import { emptyRequirement, type RequirementData } from "@/lib/form";
 import { PRICING_FORM_PENDING_MESSAGE } from "@/lib/pricing";
-import { summarizeRequirements } from "@/lib/summary";
+import type { RequirementSummary } from "@/lib/summary";
 
 export default function SuccessPage() {
-  const [data, setData] = useState<RequirementData>(emptyRequirement());
+  const [summary, setSummary] = useState<RequirementSummary | null>(null);
+  const [businessName, setBusinessName] = useState<string>();
   const [locked, setLocked] = useState(false);
   const [pricingFormAssigned, setPricingFormAssigned] = useState(false);
 
@@ -16,13 +16,12 @@ export default function SuccessPage() {
     fetch("/api/form")
       .then((res) => res.json())
       .then((payload) => {
-        setData(payload.data || emptyRequirement());
+        if (payload.summary) setSummary(payload.summary);
+        setBusinessName(payload.business?.name);
         setLocked(payload.status === "SUBMITTED");
         setPricingFormAssigned(Boolean(payload.pricingFormAssigned));
       });
   }, []);
-
-  const summary = summarizeRequirements(data);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -66,7 +65,7 @@ export default function SuccessPage() {
           </div>
         )}
       </section>
-      <RequirementsSummary data={data} summary={summary} />
+      {summary && <RequirementsSummary summary={summary} businessName={businessName} />}
     </div>
   );
 }
