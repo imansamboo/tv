@@ -1,12 +1,5 @@
 import { customerNames } from "./customer";
-import {
-  applyPricingForm,
-  calculatePricing,
-  parseItemPrice,
-  pricingConfigError,
-  type PricingFormEntry,
-  type PricingSectionView,
-} from "./pricing";
+import { calculatePricing, pricingConfigError, type PricingSectionView } from "./pricing";
 import { loadPricingForm } from "./pricing-service";
 import { prisma } from "./prisma";
 
@@ -67,50 +60,41 @@ function priceRange(sections: PricingSectionView[]) {
   };
 }
 
-export async function listPricingForms(): Promise<PricingFormSummary[]> {
-  const [catalogue, forms] = await Promise.all([
-    loadPricingForm(),
-    prisma.pricingForm.findMany({
-      orderBy: { updatedAt: "desc" },
-      include: {
-        items: { select: { itemId: true, price: true } },
-        users: { select: userSelect, orderBy: { pricingFormAssignedAt: "desc" } },
-      },
-    }),
-  ]);
+async function summarize(form: { id: string }) {
+  const sections = await loadPricingForm(form.id);
+  return { ...priceRange(sections), configError: pricingConfigError(sections) };
+}
 
-  return forms.map((form) => {
-    const sections = applyPricingForm(catalogue, form.items);
-    return {
+export async function listPricingForms(): Promise<PricingFormSummary[]> {
+  const forms = await prisma.pricingForm.findMany({
+    orderBy: { updatedAt: "desc" },
+    include: { users: { select: userSelect, orderBy: { pricingFormAssignedAt: "desc" } } },
+  });
+
+  return Promise.all(
+    forms.map(async (form) => ({
       id: form.id,
       title: form.title,
       note: form.note,
-      ...priceRange(sections),
-      configError: pricingConfigError(sections),
+      ...(await summarize(form)),
       users: form.users.map(toFormUser),
       updatedAt: form.updatedAt.toISOString(),
-    };
-  });
+    })),
+  );
 }
 
 export async function loadPricingFormDetail(id: string) {
   const form = await prisma.pricingForm.findUnique({
     where: { id },
-    include: {
-      items: { select: { itemId: true, price: true } },
-      users: { select: userSelect, orderBy: { pricingFormAssignedAt: "desc" } },
-    },
+    include: { users: { select: userSelect, orderBy: { pricingFormAssignedAt: "desc" } } },
   });
   if (!form) return null;
 
-  const sections = applyPricingForm(await loadPricingForm(), form.items);
   return {
     id: form.id,
     title: form.title,
     note: form.note,
-    items: form.items,
-    configError: pricingConfigError(sections),
-    ...priceRange(sections),
+    ...(await summarize(form)),
     users: form.users.map(toFormUser),
   };
 }
@@ -127,35 +111,4 @@ export async function loadAssignableCustomers() {
     select: { ...userSelect, pricingFormId: true },
   });
   return users.map((user) => ({ ...toFormUser(user), pricingFormId: user.pricingFormId }));
-}
-
-/**
- * Validates the admin's item list against the catalogue. Empty or missing
- * prices mean "use the catalogue price".
- */
-export async function parseFormEntries(
-  raw: readonly { itemId: string; price?: unknown }[],
-): Promise<{ entries: PricingFormEntry[] } | { error: string }> {
-  const ids = [...new Set(raw.map((entry) => entry.itemId))];
-  const known = await prisma.pricingItem.findMany({
-    where: { id: { in: ids } },
-    select: { id: true },
-  });
-  if (known.length !== ids.length) {
-    return { error: "برخی از موردهای انتخاب‌شده دیگر وجود ندارند. صفحه را دوباره بارگذاری کنید." };
-  }
-
-  const entries = new Map<string, PricingFormEntry>();
-  for (const entry of raw) {
-    const blank =
-      entry.price === undefined || entry.price === null || String(entry.price).trim() === "";
-    if (blank) {
-      entries.set(entry.itemId, { itemId: entry.itemId, price: null });
-      continue;
-    }
-    const parsed = parseItemPrice(entry.price);
-    if ("error" in parsed) return { error: parsed.error };
-    entries.set(entry.itemId, { itemId: entry.itemId, price: parsed.price });
-  }
-  return { entries: [...entries.values()] };
 }

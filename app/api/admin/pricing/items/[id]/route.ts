@@ -6,12 +6,9 @@ import {
   baseLockFor,
   isDuplicateBaseError,
   moveItem,
+  releasePricingImages,
 } from "@/lib/pricing-service";
-import {
-  IMAGE_PATH_MESSAGE,
-  deletePricingImage,
-  isStoredPricingImage,
-} from "@/lib/pricing-upload";
+import { IMAGE_PATH_MESSAGE, isStoredPricingImage } from "@/lib/pricing-upload";
 import { prisma } from "@/lib/prisma";
 import { forbidden, getAdminSession } from "@/lib/session";
 
@@ -42,7 +39,10 @@ export async function PATCH(
     );
   }
 
-  const current = await prisma.pricingItem.findUnique({ where: { id } });
+  const current = await prisma.pricingItem.findUnique({
+    where: { id },
+    include: { section: { select: { formId: true } } },
+  });
   if (!current) {
     return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
   }
@@ -64,7 +64,7 @@ export async function PATCH(
 
   if (fields.kind !== undefined) {
     data.kind = fields.kind;
-    data.baseLock = baseLockFor(fields.kind);
+    data.baseLock = baseLockFor(fields.kind, current.section.formId);
   }
 
   let imageToDelete: string | null = null;
@@ -93,7 +93,7 @@ export async function PATCH(
       }
       throw error;
     }
-    await deletePricingImage(imageToDelete);
+    await releasePricingImages([imageToDelete]);
   }
 
   return NextResponse.json({ ok: true });
@@ -113,7 +113,7 @@ export async function DELETE(
 
   // Submitted quotes keep their snapshot rows; only the live catalogue entry goes.
   await prisma.pricingItem.delete({ where: { id } });
-  await deletePricingImage(item.imageUrl);
+  await releasePricingImages([item.imageUrl]);
 
   return NextResponse.json({ ok: true });
 }

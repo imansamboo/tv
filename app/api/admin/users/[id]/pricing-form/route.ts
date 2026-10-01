@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { pricingConfigError } from "@/lib/pricing";
-import { loadAssignedPricingForm } from "@/lib/pricing-service";
+import { loadPricingForm } from "@/lib/pricing-service";
 import { prisma } from "@/lib/prisma";
 import { forbidden, getAdminSession } from "@/lib/session";
 
@@ -52,7 +52,7 @@ export async function PUT(
     if (!form) {
       return NextResponse.json({ error: "فرم قیمت‌گذاری پیدا نشد." }, { status: 404 });
     }
-    const configError = pricingConfigError(await loadAssignedPricingForm(formId));
+    const configError = pricingConfigError(await loadPricingForm(formId));
     if (configError) {
       return NextResponse.json(
         { error: `این فرم هنوز قابل استفاده نیست: ${configError}` },

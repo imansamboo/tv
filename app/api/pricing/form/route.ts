@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { pricingConfigError } from "@/lib/pricing";
-import { findQuoteForUser, loadAssignedPricingForm } from "@/lib/pricing-service";
+import { findQuoteForUser, loadPricingForm } from "@/lib/pricing-service";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -19,7 +19,7 @@ export async function GET() {
   ]);
 
   const formId = user?.pricingFormId ?? null;
-  const sections = formId ? await loadAssignedPricingForm(formId) : [];
+  const sections = formId ? await loadPricingForm(formId) : [];
 
   return NextResponse.json({
     requirementSubmitted: user?.requirement?.status === "SUBMITTED",
