@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { mergeRequirement } from "@/lib/form";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -28,6 +27,7 @@ export async function GET() {
           select: {
             email: true,
             name: true,
+            business: { select: { name: true } },
             pricingForm: { select: { title: true } },
             pricingQuote: { select: { id: true } },
           },
@@ -39,15 +39,14 @@ export async function GET() {
   return NextResponse.json({
     stats: { users, drafts, submitted, awaitingForm },
     submissions: rows.map((row) => {
-      const data = mergeRequirement(JSON.parse(row.data));
       return {
         id: row.id,
         status: row.status,
         email: row.user.email,
-        contactName: data.contactName || row.user.name,
-        storeName: data.storeName,
-        businessType: data.businessType,
-        city: data.city,
+        contactName: row.contactName || row.user.name,
+        storeName: row.storeName,
+        businessName: row.user.business?.name ?? null,
+        city: row.city,
         featureCount: row.extrasPrice,
         completionPercent: row.totalPrice,
         submittedAt: row.submittedAt,

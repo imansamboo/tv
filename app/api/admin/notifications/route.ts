@@ -28,7 +28,7 @@ export async function GET(request: Request) {
             email: true,
             name: true,
             pricingFormId: true,
-            requirement: { select: { id: true, data: true } },
+            requirement: { select: { id: true, contactName: true, storeName: true } },
             pricingQuote: { select: { id: true } },
           },
         },

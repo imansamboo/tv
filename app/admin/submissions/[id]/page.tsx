@@ -6,14 +6,18 @@ import { AdminShell } from "@/components/AdminShell";
 import { PricingFormAssigner, type AssignableForm } from "@/components/PricingFormAssigner";
 import { ReviewPanel } from "@/components/form/ReviewPanel";
 import { RequirementsSummary } from "@/components/RequirementsSummary";
-import { emptyRequirement, type RequirementData } from "@/lib/form";
+import type { RequirementData, RequirementForm } from "@/lib/form";
 import { faDate, toman } from "@/lib/format";
 import { summarizeRequirements } from "@/lib/summary";
 
 type Detail = {
   id: string;
   status: "DRAFT" | "SUBMITTED";
-  data: RequirementData;
+  form: RequirementForm | null;
+  data: RequirementData | null;
+  contactName: string | null;
+  storeName: string | null;
+  business: { id: string; name: string } | null;
   completionPercent: number;
   featureCount: number;
   submittedAt: string | null;
@@ -45,8 +49,7 @@ export default function SubmissionDetailPage({
 
   useEffect(load, [load]);
 
-  const data = row?.data || emptyRequirement();
-  const summary = summarizeRequirements(data);
+  const summary = row?.form && row.data ? summarizeRequirements(row.form, row.data) : null;
 
   return (
     <AdminShell>
@@ -61,9 +64,12 @@ export default function SubmissionDetailPage({
             <div className="mb-6 flex justify-between gap-3">
               <div>
                 <p className="text-amber-300">جزئیات نیازمندی‌ها</p>
-                <h2 className="mt-1 text-2xl font-black">{data.storeName || "بدون نام"}</h2>
+                <h2 className="mt-1 text-2xl font-black">{row.storeName || "بدون نام"}</h2>
                 <p className="mt-1 text-sm text-white/50">
-                  {data.contactName || row.user.name} · {row.user.email}
+                  {row.contactName || row.user.name} · {row.user.email}
+                </p>
+                <p className="mt-1 text-sm text-white/50">
+                  کسب‌وکار: {row.business?.name ?? "انتخاب نشده"}
                 </p>
               </div>
               <span className="h-fit rounded-full bg-white/10 px-3 py-1 text-sm">
@@ -101,10 +107,22 @@ export default function SubmissionDetailPage({
                 onChanged={load}
               />
             ) : null}
-            <ReviewPanel data={data} completionPercent={summary.completionPercent} />
+            {row.form && row.data && summary ? (
+              <ReviewPanel
+                form={row.form}
+                data={row.data}
+                completionPercent={summary.completionPercent}
+              />
+            ) : (
+              <p className="text-sm text-white/50">
+                فرم نیازمندی این کاربر در دسترس نیست (کسب‌وکار انتخاب نشده یا فرم آن نامعتبر است).
+              </p>
+            )}
           </section>
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <RequirementsSummary data={data} summary={summary} />
+            {summary && (
+              <RequirementsSummary summary={summary} businessName={row.business?.name} />
+            )}
           </div>
         </div>
       )}

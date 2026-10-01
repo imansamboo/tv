@@ -1,41 +1,42 @@
 import { NextResponse } from "next/server";
-import { emptyRequirement, mergeRequirement } from "@/lib/form";
+import {
+  BROKEN_FORM_ERROR,
+  listActiveBusinesses,
+  loadCustomerRequirement,
+  requirementColumns,
+} from "@/lib/business";
+import { normalizeRequirement } from "@/lib/form";
 import { summarizeRequirements } from "@/lib/summary";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-
-async function loadOrCreate(userId: string) {
-  let requirement = await prisma.requirement.findUnique({
-    where: { userId },
-  });
-  if (!requirement) {
-    requirement = await prisma.requirement.create({
-      data: {
-        userId,
-        data: JSON.stringify(emptyRequirement()),
-      },
-    });
-  }
-  const data = mergeRequirement(JSON.parse(requirement.data));
-  const summary = summarizeRequirements(data);
-  return { requirement, data, summary };
-}
 
 export async function GET() {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "وارد شوید." }, { status: 401 });
   }
-  const [{ requirement, data, summary }, user] = await Promise.all([
-    loadOrCreate(session.sub),
-    prisma.user.findUnique({ where: { id: session.sub }, select: { pricingFormId: true } }),
-  ]);
+
+  const loaded = await loadCustomerRequirement(session.sub);
+  if (loaded.kind === "needsBusiness") {
+    return NextResponse.json({
+      needsBusiness: true,
+      businesses: await listActiveBusinesses(),
+      userName: session.name,
+    });
+  }
+  if (loaded.kind === "brokenForm") {
+    return NextResponse.json({ error: BROKEN_FORM_ERROR }, { status: 500 });
+  }
+
+  const { requirement, form, data } = loaded;
   return NextResponse.json({
-    pricingFormAssigned: Boolean(user?.pricingFormId),
+    business: loaded.business,
+    pricingFormAssigned: loaded.pricingFormAssigned,
+    form,
     status: requirement.status,
-    currentStep: requirement.currentStep,
+    currentStep: Math.min(requirement.currentStep, form.steps.length),
     data,
-    summary,
+    summary: summarizeRequirements(form, data),
     submittedAt: requirement.submittedAt,
     updatedAt: requirement.updatedAt,
     userName: session.name,
@@ -49,7 +50,15 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const { requirement } = await loadOrCreate(session.sub);
+  const loaded = await loadCustomerRequirement(session.sub);
+  if (loaded.kind === "needsBusiness") {
+    return NextResponse.json({ error: "ابتدا کسب‌وکار خود را انتخاب کنید." }, { status: 409 });
+  }
+  if (loaded.kind === "brokenForm") {
+    return NextResponse.json({ error: BROKEN_FORM_ERROR }, { status: 500 });
+  }
+
+  const { requirement, form } = loaded;
   if (requirement.status === "SUBMITTED") {
     return NextResponse.json(
       { error: "این درخواست ثبت نهایی شده و دیگر قابل ویرایش نیست." },
@@ -57,21 +66,15 @@ export async function PUT(request: Request) {
     );
   }
 
-  const data = mergeRequirement(body?.data);
+  const data = normalizeRequirement(body?.data, form);
   const currentStep = Number.isInteger(body?.currentStep)
-    ? Math.min(6, Math.max(0, body.currentStep))
+    ? Math.min(form.steps.length, Math.max(0, body.currentStep))
     : requirement.currentStep;
-  const summary = summarizeRequirements(data);
+  const { columns, summary } = requirementColumns(form, data);
 
   const saved = await prisma.requirement.update({
     where: { userId: session.sub },
-    data: {
-      data: JSON.stringify(data),
-      currentStep,
-      tvPrice: 0,
-      extrasPrice: summary.featureCount,
-      totalPrice: summary.completionPercent,
-    },
+    data: { ...columns, currentStep },
   });
 
   return NextResponse.json({

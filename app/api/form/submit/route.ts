@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { mergeRequirement } from "@/lib/form";
+import { BROKEN_FORM_ERROR, loadCustomerRequirement, requirementColumns } from "@/lib/business";
 import { notifyAdmins } from "@/lib/notifications";
-import { summarizeRequirements } from "@/lib/summary";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { firstInvalidStep } from "@/lib/validate";
@@ -12,12 +11,15 @@ export async function POST() {
     return NextResponse.json({ error: "وارد شوید." }, { status: 401 });
   }
 
-  const requirement = await prisma.requirement.findUnique({
-    where: { userId: session.sub },
-  });
-  if (!requirement) {
-    return NextResponse.json({ error: "فرم پیدا نشد." }, { status: 404 });
+  const loaded = await loadCustomerRequirement(session.sub);
+  if (loaded.kind === "needsBusiness") {
+    return NextResponse.json({ error: "ابتدا کسب‌وکار خود را انتخاب کنید." }, { status: 409 });
   }
+  if (loaded.kind === "brokenForm") {
+    return NextResponse.json({ error: BROKEN_FORM_ERROR }, { status: 500 });
+  }
+
+  const { requirement, form, data } = loaded;
   if (requirement.status === "SUBMITTED") {
     return NextResponse.json(
       { error: "این درخواست قبلاً ثبت شده است.", alreadySubmitted: true },
@@ -25,26 +27,20 @@ export async function POST() {
     );
   }
 
-  const data = mergeRequirement(JSON.parse(requirement.data));
-  const invalid = firstInvalidStep(data);
+  const invalid = firstInvalidStep(form, data);
   if (invalid) {
-    return NextResponse.json(
-      { error: invalid.error, step: invalid.step },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: invalid.error, step: invalid.step }, { status: 400 });
   }
 
-  const summary = summarizeRequirements(data);
+  const { columns, summary } = requirementColumns(form, data);
   const saved = await prisma.requirement.update({
     where: { userId: session.sub },
     data: {
+      ...columns,
       status: "SUBMITTED",
       submittedAt: new Date(),
-      currentStep: 6,
-      tvPrice: 0,
-      extrasPrice: summary.featureCount,
-      totalPrice: summary.completionPercent,
-      data: JSON.stringify(data),
+      currentStep: form.steps.length,
+      formSnapshot: JSON.stringify(form),
     },
   });
 

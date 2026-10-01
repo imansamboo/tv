@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
-import { labelOf } from "@/lib/catalog";
-import { BUSINESS_TYPES } from "@/lib/catalog";
 import { faDate } from "@/lib/format";
 
 type Row = {
@@ -13,8 +11,8 @@ type Row = {
   email: string;
   contactName: string;
   storeName: string;
-  businessType: string;
-  city: string;
+  businessName: string | null;
+  city: string | null;
   featureCount: number;
   completionPercent: number;
   submittedAt: string | null;
@@ -43,7 +41,7 @@ export default function AdminPage() {
     const query = q.trim();
     if (!query) return list;
     return list.filter((row) =>
-      [row.email, row.contactName, row.storeName, row.city].join(" ").includes(query),
+      [row.email, row.contactName, row.storeName, row.city, row.businessName].join(" ").includes(query),
     );
   }, [payload, q]);
 
@@ -72,7 +70,7 @@ export default function AdminPage() {
         <table className="w-full min-w-[820px] text-right text-sm">
           <thead className="bg-white/5 text-white/50">
             <tr>
-              {["فروشگاه", "رابط", "فعالیت", "پیشرفت", "وضعیت", "فرم قیمت", ""].map((h) => (
+              {["فروشگاه", "رابط", "کسب‌وکار", "پیشرفت", "وضعیت", "فرم قیمت", ""].map((h) => (
                 <th key={h} className="px-4 py-3 font-medium">
                   {h}
                 </th>
@@ -91,7 +89,7 @@ export default function AdminPage() {
                   <div className="text-xs text-white/45">{row.email}</div>
                 </td>
                 <td className="px-4 py-3">
-                  {labelOf(row.businessType, BUSINESS_TYPES)}
+                  {row.businessName ?? "—"}
                 </td>
                 <td className="px-4 py-3">
                   {row.completionPercent}%

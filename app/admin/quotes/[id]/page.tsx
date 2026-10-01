@@ -16,6 +16,7 @@ type Detail = {
     contactName: string;
     storeName: string;
     city: string;
+    businessName: string | null;
     requirementId: string | null;
     requirementSubmittedAt: string | null;
   };
@@ -113,6 +114,7 @@ export default function AdminQuoteDetailPage({
               <p className="text-xs tracking-wide text-amber-300">اطلاعات فروشگاه</p>
               <div className="mt-4 grid gap-3 text-sm">
                 <Info label="فروشگاه" value={detail.user.storeName} />
+                <Info label="کسب‌وکار" value={detail.user.businessName ?? ""} />
                 <Info label="رابط" value={detail.user.contactName || detail.user.name || ""} />
                 <Info label="ایمیل" value={detail.user.email} />
                 <Info label="شهر" value={detail.user.city} />

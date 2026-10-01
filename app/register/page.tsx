@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
+import type { BusinessOption } from "@/lib/business";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -11,6 +12,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [businessId, setBusinessId] = useState("");
+  const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -24,10 +27,21 @@ export default function RegisterPage() {
       .finally(() => setCheckingSession(false));
   }, [router]);
 
+  useEffect(() => {
+    fetch("/api/businesses")
+      .then((res) => res.json())
+      .then((payload: { businesses?: BusinessOption[] }) => setBusinesses(payload.businesses ?? []))
+      .catch(() => setBusinesses([]));
+  }, []);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (password !== confirm) {
       setError("تکرار رمز عبور یکسان نیست.");
+      return;
+    }
+    if (!businessId) {
+      setError("کسب‌وکار خود را انتخاب کنید.");
       return;
     }
     setBusy(true);
@@ -35,7 +49,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, businessId }),
     });
     const payload = await res.json();
     setBusy(false);
@@ -56,9 +70,9 @@ export default function RegisterPage() {
       onSubmit={onSubmit}
       className="mx-auto max-w-md space-y-4 rounded-3xl border border-white/10 bg-[#101826] p-8"
     >
-      <h1 className="text-2xl font-black">ثبت‌نام صاحب فروشگاه</h1>
+      <h1 className="text-2xl font-black">ثبت‌نام صاحب کسب‌وکار</h1>
       <p className="text-sm text-white/60">
-        با ایمیل و رمز عبور حساب بسازید و نیازمندی‌های سایت فروش تلویزیون خود را ثبت کنید.
+        با ایمیل و رمز عبور حساب بسازید، کسب‌وکار خود را انتخاب کنید و نیازمندی‌های سایت آن را ثبت کنید.
       </p>
       <Field label="نام و نام خانوادگی">
         <input
@@ -67,6 +81,24 @@ export default function RegisterPage() {
           onChange={(event) => setName(event.target.value)}
           required
         />
+      </Field>
+      <Field
+        label="کسب‌وکار"
+        hint={businesses.find((business) => business.id === businessId)?.description || undefined}
+      >
+        <select
+          className={fieldClass}
+          value={businessId}
+          onChange={(event) => setBusinessId(event.target.value)}
+          required
+        >
+          <option value="">انتخاب کنید</option>
+          {businesses.map((business) => (
+            <option key={business.id} value={business.id}>
+              {business.name}
+            </option>
+          ))}
+        </select>
       </Field>
       <Field label="ایمیل">
         <input
