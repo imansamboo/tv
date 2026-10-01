@@ -18,6 +18,12 @@ export async function GET() {
 
   const loaded = await loadCustomerRequirement(session.sub);
   if (loaded.kind === "needsBusiness") {
+    if (session.role !== "CUSTOMER") {
+      return NextResponse.json(
+        { error: "فرم نیازمندی‌ها مخصوص مشتریان است؛ از پنل مدیریت استفاده کنید." },
+        { status: 403 },
+      );
+    }
     return NextResponse.json({
       needsBusiness: true,
       businesses: await listActiveBusinesses(),
