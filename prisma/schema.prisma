@@ -72,8 +72,12 @@ model CampaignLead {
   createdAt DateTime @default(now())
 }
 
+/// Sections with no `formId` make up the default template that new pricing
+/// forms are copied from; every other section belongs to exactly one form.
 model PricingSection {
   id        String        @id @default(cuid())
+  formId    String?
+  form      PricingForm?  @relation(fields: [formId], references: [id], onDelete: Cascade)
   title     String
   subtitle  String?
   sortOrder Int           @default(0)
@@ -82,7 +86,7 @@ model PricingSection {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  @@index([sortOrder])
+  @@index([formId, sortOrder])
 }
 
 model PricingItem {
@@ -94,42 +98,30 @@ model PricingItem {
   price       Int                @default(0)
   imageUrl    String?
   kind        PricingItemKind    @default(OPTIONAL)
-  /// Holds the literal "BASE" on the single mandatory item and NULL everywhere
-  /// else. SQLite treats NULLs as distinct in a UNIQUE index, so this gives the
-  /// "at most one base item" rule a database constraint instead of only code.
+  /// Holds "BASE" (template) or "BASE:<formId>" on the single mandatory item of
+  /// each form and NULL everywhere else. SQLite treats NULLs as distinct in a
+  /// UNIQUE index, so this gives the "at most one base item per form" rule a
+  /// database constraint instead of only code.
   baseLock    String?            @unique
   sortOrder   Int                @default(0)
   active      Boolean            @default(true)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   quoteItems  PricingQuoteItem[]
-  formItems   PricingFormItem[]
 
   @@index([sectionId, sortOrder])
 }
 
-/// A selection of catalogue items prepared by the admin and assigned to one or
-/// more customers. The base item is always part of every form.
+/// A full pricing form (its own sections and items) prepared by the admin and
+/// assigned to one or more customers.
 model PricingForm {
-  id        String            @id @default(cuid())
+  id        String           @id @default(cuid())
   title     String
   note      String?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  items     PricingFormItem[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  sections  PricingSection[]
   users     User[]
-}
-
-model PricingFormItem {
-  id     String      @id @default(cuid())
-  formId String
-  form   PricingForm @relation(fields: [formId], references: [id], onDelete: Cascade)
-  itemId String
-  item   PricingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  /// Price for this form only; NULL falls back to the catalogue price.
-  price  Int?
-
-  @@unique([formId, itemId])
 }
 
 model AdminNotification {

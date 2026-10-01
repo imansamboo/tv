@@ -8,7 +8,7 @@ import {
   pricingConfigError,
   totalPriceError,
 } from "@/lib/pricing";
-import { findQuoteForUser, loadAssignedPricingForm, serializeQuote } from "@/lib/pricing-service";
+import { findQuoteForUser, loadPricingForm, serializeQuote } from "@/lib/pricing-service";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const sections = await loadAssignedPricingForm(user.pricingFormId);
+  const sections = await loadPricingForm(user.pricingFormId);
   const configError = pricingConfigError(sections);
   if (configError) {
     return NextResponse.json({ error: configError, configError }, { status: 409 });

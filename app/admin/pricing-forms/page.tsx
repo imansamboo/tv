@@ -14,7 +14,7 @@ function PricingFormsList() {
   const assignTo = search.get("assignTo");
   const [forms, setForms] = useState<PricingFormSummary[] | null>(null);
   const [title, setTitle] = useState("");
-  const [copyFromId, setCopyFromId] = useState("");
+  const [copyFrom, setCopyFrom] = useState("template");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -32,7 +32,7 @@ function PricingFormsList() {
     const res = await fetch("/api/admin/pricing-forms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, copyFromId: copyFromId || undefined }),
+      body: JSON.stringify({ title, copyFrom }),
     });
     const payload = await res.json().catch(() => ({}));
     setBusy(false);
@@ -47,10 +47,10 @@ function PricingFormsList() {
   return (
     <AdminShell>
       <p className="text-white/60">
-        برای هر کاربر یک فرم قیمت‌گذاری اختصاصی بسازید: امکانات مناسب نیازمندی‌هایش را از فهرست
-        امکانات انتخاب کنید، در صورت نیاز قیمت را برای همان فرم تغییر دهید و در پایان فرم را به کاربر
-        اختصاص دهید. تا زمان اختصاص فرم، کاربر پیام «فرم قیمت‌گذاری شما به‌زودی آماده می‌شود» را
-        می‌بیند.
+        برای هر کاربر یک فرم قیمت‌گذاری اختصاصی بسازید. هر فرم بخش‌ها و موردهای خودش را دارد (عنوان،
+        قیمت، تصویر و توضیح) که می‌توانید آزادانه اضافه، ویرایش یا حذف کنید؛ سپس فرم را به کاربر اختصاص
+        دهید. فرم جدید می‌تواند از روی قالب پیش‌فرض، از روی یک فرم دیگر یا خالی ساخته شود. تا زمان
+        اختصاص فرم، کاربر پیام «فرم قیمت‌گذاری شما به‌زودی آماده می‌شود» را می‌بیند.
       </p>
 
       {assignTo ? (
@@ -77,10 +77,11 @@ function PricingFormsList() {
         <Field label="شروع از روی">
           <select
             className={fieldClass}
-            value={copyFromId}
-            onChange={(event) => setCopyFromId(event.target.value)}
+            value={copyFrom}
+            onChange={(event) => setCopyFrom(event.target.value)}
           >
-            <option value="">فرم خالی (فقط مورد پایه)</option>
+            <option value="template">کپی از قالب پیش‌فرض</option>
+            <option value="empty">فرم خالی</option>
             {(forms ?? []).map((form) => (
               <option key={form.id} value={form.id}>
                 کپی از: {form.title}

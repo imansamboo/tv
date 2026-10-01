@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  loadAssignableCustomers,
-  loadPricingFormDetail,
-  parseFormEntries,
-} from "@/lib/pricing-forms";
-import { loadPricingConfig } from "@/lib/pricing-service";
+import { loadAssignableCustomers, loadPricingFormDetail } from "@/lib/pricing-forms";
+import { releasePricingImages } from "@/lib/pricing-service";
 import { prisma } from "@/lib/prisma";
 import { forbidden, getAdminSession } from "@/lib/session";
 
@@ -18,16 +14,15 @@ export async function GET(
   if (!(await getAdminSession())) return forbidden();
 
   const { id } = await context.params;
-  const [form, catalogue, customers] = await Promise.all([
+  const [form, customers] = await Promise.all([
     loadPricingFormDetail(id),
-    loadPricingConfig(),
     loadAssignableCustomers(),
   ]);
   if (!form) {
     return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
   }
 
-  return NextResponse.json({ form, catalogue, customers });
+  return NextResponse.json({ form, customers });
 }
 
 const schema = z.object({
@@ -38,15 +33,6 @@ const schema = z.object({
     .max(120, "عنوان فرم خیلی طولانی است.")
     .optional(),
   note: z.string().trim().max(1000, "توضیح فرم خیلی طولانی است.").nullable().optional(),
-  items: z
-    .array(
-      z.object({
-        itemId: z.string().min(1),
-        price: z.union([z.number(), z.string(), z.null()]).optional(),
-      }),
-    )
-    .max(500)
-    .optional(),
 });
 
 export async function PATCH(
@@ -69,31 +55,12 @@ export async function PATCH(
     return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
   }
 
-  let entries: { itemId: string; price: number | null }[] | null = null;
-  if (parsed.data.items) {
-    const result = await parseFormEntries(parsed.data.items);
-    if ("error" in result) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
-    }
-    entries = result.entries;
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.pricingForm.update({
-      where: { id },
-      data: {
-        ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
-        ...(parsed.data.note !== undefined ? { note: parsed.data.note || null } : {}),
-        // Touch the row even when only items change so lists sort by last edit.
-        updatedAt: new Date(),
-      },
-    });
-    if (entries) {
-      await tx.pricingFormItem.deleteMany({ where: { formId: id } });
-      await tx.pricingFormItem.createMany({
-        data: entries.map((entry) => ({ formId: id, ...entry })),
-      });
-    }
+  await prisma.pricingForm.update({
+    where: { id },
+    data: {
+      ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
+      ...(parsed.data.note !== undefined ? { note: parsed.data.note || null } : {}),
+    },
   });
 
   return NextResponse.json({ ok: true, form: await loadPricingFormDetail(id) });
@@ -108,7 +75,10 @@ export async function DELETE(
   const { id } = await context.params;
   const form = await prisma.pricingForm.findUnique({
     where: { id },
-    select: { users: { where: { pricingQuote: null }, select: { id: true } } },
+    select: {
+      users: { where: { pricingQuote: null }, select: { id: true } },
+      sections: { select: { items: { select: { imageUrl: true } } } },
+    },
   });
   if (!form) {
     return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
@@ -124,6 +94,10 @@ export async function DELETE(
     );
   }
 
+  // Sections and items cascade; submitted quotes keep their own snapshot rows.
   await prisma.pricingForm.delete({ where: { id } });
+  await releasePricingImages(
+    form.sections.flatMap((section) => section.items.map((item) => item.imageUrl)),
+  );
   return NextResponse.json({ ok: true });
 }

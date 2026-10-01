@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { deletePricingImage } from "@/lib/pricing-upload";
-import { moveSection } from "@/lib/pricing-service";
+import { moveSection, releasePricingImages } from "@/lib/pricing-service";
 import { prisma } from "@/lib/prisma";
 import { forbidden, getAdminSession } from "@/lib/session";
 
@@ -73,7 +72,7 @@ export async function DELETE(
 
   // Items cascade with the section; their quote snapshots keep their own copies.
   await prisma.pricingSection.delete({ where: { id } });
-  await Promise.all(section.items.map((item) => deletePricingImage(item.imageUrl)));
+  await releasePricingImages(section.items.map((item) => item.imageUrl));
 
   return NextResponse.json({ ok: true });
 }

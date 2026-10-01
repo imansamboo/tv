@@ -188,35 +188,6 @@ export function calculatePricing(
   };
 }
 
-export type PricingFormEntry = {
-  itemId: string;
-  /** `null` keeps the catalogue price. */
-  price: number | null;
-};
-
-/**
- * Narrows the active catalogue to the items picked for one customer's form and
- * applies that form's prices. The base item is always kept so every form has a
- * starting price; sections left without items are dropped.
- */
-export function applyPricingForm(
-  sections: PricingSectionView[],
-  entries: readonly PricingFormEntry[],
-): PricingSectionView[] {
-  const byItem = new Map(entries.map((entry) => [entry.itemId, entry]));
-  return sortSections(sections)
-    .map((section) => ({
-      ...section,
-      items: section.items
-        .filter((item) => item.kind === "BASE" || byItem.has(item.id))
-        .map((item) => {
-          const price = byItem.get(item.id)?.price;
-          return price === null || price === undefined ? item : { ...item, price };
-        }),
-    }))
-    .filter((section) => section.items.length > 0);
-}
-
 /** Persian message when a price is outside the storable range, else `null`. */
 export function itemPriceError(price: number): string | null {
   if (!Number.isInteger(price) || price < 0) {

@@ -263,7 +263,18 @@ function ItemForm({
   );
 }
 
-export function PricingConfigManager() {
+/**
+ * Editor for one pricing form's sections and items. Without `formId` it edits
+ * the default template that new forms are copied from.
+ */
+export function PricingConfigManager({
+  formId,
+  onChange,
+}: {
+  formId?: string;
+  /** Called after every successful change, e.g. to refresh a summary. */
+  onChange?: () => void;
+}) {
   const [payload, setPayload] = useState<ConfigPayload | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -280,7 +291,9 @@ export function PricingConfigManager() {
 
   const load = useCallback(
     () =>
-      fetch("/api/admin/pricing")
+      fetch(
+        formId ? `/api/admin/pricing?formId=${encodeURIComponent(formId)}` : "/api/admin/pricing",
+      )
         .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
         .then(({ ok, data }) => {
           if (!ok) {
@@ -290,7 +303,7 @@ export function PricingConfigManager() {
           setPayload(data);
         })
         .catch(() => setError("ارتباط با سرور برقرار نشد.")),
-    [],
+    [formId],
   );
 
   useEffect(() => {
@@ -313,6 +326,7 @@ export function PricingConfigManager() {
           return false;
         }
         await load();
+        onChange?.();
         return true;
       } catch {
         setError("ارتباط با سرور برقرار نشد.");
@@ -321,7 +335,7 @@ export function PricingConfigManager() {
         setBusy(false);
       }
     },
-    [load],
+    [load, onChange],
   );
 
   if (!payload) {
@@ -332,13 +346,25 @@ export function PricingConfigManager() {
 
   return (
     <div className="space-y-5">
+      {!formId ? (
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/65">
+          این قالب پیش‌فرض است و مستقیم به هیچ کاربری نمایش داده نمی‌شود. هر فرم اختصاصی جدید یک
+          کپی مستقل از این قالب است که می‌توانید بخش‌ها و موردهایش را جداگانه تغییر دهید.
+        </div>
+      ) : null}
+
       {payload.configError ? (
         <div className="rounded-2xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
-          {payload.configError} تا رفع این مورد، فرم قیمت‌گذاری برای مشتری فعال نمی‌شود.
+          {payload.configError}{" "}
+          {formId
+            ? "تا رفع این مورد، این فرم قابل اختصاص به کاربر نیست."
+            : "فرم‌هایی که از این قالب ساخته شوند تا رفع این مورد قابل اختصاص نیستند."}
         </div>
       ) : (
         <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
-          فرم قیمت‌گذاری فعال است و مشتری‌ها می‌توانند آن را تکمیل کنند.
+          {formId
+            ? "این فرم کامل است و می‌توان آن را به کاربر اختصاص داد."
+            : "قالب کامل است و فرم‌های ساخته‌شده از آن آماده اختصاص هستند."}
         </div>
       )}
 
@@ -375,6 +401,7 @@ export function PricingConfigManager() {
             const ok = await mutate("/api/admin/pricing/sections", {
               method: "POST",
               body: JSON.stringify({
+                formId: formId ?? null,
                 title: newSection.title,
                 subtitle: newSection.subtitle || undefined,
                 active: newSection.active,

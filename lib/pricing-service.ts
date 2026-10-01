@@ -1,8 +1,8 @@
 import { Prisma } from "@prisma/client";
+import { deletePricingImage } from "./pricing-upload";
 import { prisma } from "./prisma";
 import {
   BASE_LOCK_VALUE,
-  applyPricingForm,
   sortSections,
   type PricingItemKind,
   type PricingSectionView,
@@ -55,10 +55,18 @@ const sectionWithItems = {
   items: { orderBy: [{ sortOrder: "asc" }, { title: "asc" }] },
 } satisfies Prisma.PricingSectionInclude;
 
+/**
+ * `null` addresses the default template the admin copies new forms from; any
+ * other value is the id of one customer-facing pricing form.
+ */
+export type PricingFormScope = string | null;
+
 /** Sections and items the customer may choose from: active ones only. */
-export async function loadPricingForm(): Promise<PricingSectionView[]> {
+export async function loadPricingForm(
+  formId: PricingFormScope = null,
+): Promise<PricingSectionView[]> {
   const sections = await prisma.pricingSection.findMany({
-    where: { active: true },
+    where: { active: true, formId },
     orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
     include: { items: { ...sectionWithItems.items, where: { active: true } } },
   });
@@ -82,21 +90,12 @@ export async function loadPricingForm(): Promise<PricingSectionView[]> {
   );
 }
 
-/** The form one customer was assigned: active catalogue rows filtered by the form. */
-export async function loadAssignedPricingForm(formId: string): Promise<PricingSectionView[]> {
-  const [sections, entries] = await Promise.all([
-    loadPricingForm(),
-    prisma.pricingFormItem.findMany({
-      where: { formId },
-      select: { itemId: true, price: true },
-    }),
-  ]);
-  return applyPricingForm(sections, entries);
-}
-
 /** Full configuration, including disabled rows, for the admin screens. */
-export async function loadPricingConfig(): Promise<AdminPricingSection[]> {
+export async function loadPricingConfig(
+  formId: PricingFormScope = null,
+): Promise<AdminPricingSection[]> {
   const sections = await prisma.pricingSection.findMany({
+    where: { formId },
     orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
     include: sectionWithItems,
   });
@@ -154,9 +153,13 @@ export async function findQuoteForUser(userId: string) {
   return quote ? serializeQuote(quote) : null;
 }
 
-/** The `baseLock` column carries the marker only on the single base item. */
-export function baseLockFor(kind: PricingItemKind) {
-  return kind === "BASE" ? BASE_LOCK_VALUE : null;
+/**
+ * The `baseLock` column carries the marker only on the single base item, and
+ * the marker names the form so every form can have its own base item.
+ */
+export function baseLockFor(kind: PricingItemKind, formId: PricingFormScope) {
+  if (kind !== "BASE") return null;
+  return formId ? `${BASE_LOCK_VALUE}:${formId}` : BASE_LOCK_VALUE;
 }
 
 /**
@@ -174,8 +177,11 @@ export function isDuplicateBaseError(error: unknown) {
 export const DUPLICATE_BASE_MESSAGE =
   "فقط یک مورد پایه می‌تواند وجود داشته باشد. ابتدا مورد پایه فعلی را به «اختیاری» تغییر دهید.";
 
-export async function nextSectionOrder() {
-  const last = await prisma.pricingSection.findFirst({ orderBy: { sortOrder: "desc" } });
+export async function nextSectionOrder(formId: PricingFormScope) {
+  const last = await prisma.pricingSection.findFirst({
+    where: { formId },
+    orderBy: { sortOrder: "desc" },
+  });
   return (last?.sortOrder ?? -1) + 1;
 }
 
@@ -193,7 +199,10 @@ export async function nextItemOrder(sectionId: string) {
  */
 export async function moveSection(id: string, direction: "up" | "down") {
   return prisma.$transaction(async (tx) => {
+    const section = await tx.pricingSection.findUnique({ where: { id }, select: { formId: true } });
+    if (!section) return false;
     const siblings = await tx.pricingSection.findMany({
+      where: { formId: section.formId },
       orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
       select: { id: true },
     });
@@ -238,4 +247,55 @@ export async function moveItem(id: string, direction: "up" | "down") {
     }
     return true;
   });
+}
+
+/**
+ * Copies every section and item of one form (or of the template) into another
+ * form. Image files are shared between copies, which is why removal goes
+ * through `releasePricingImages`.
+ */
+export async function copyPricingSections(
+  tx: Prisma.TransactionClient,
+  from: PricingFormScope,
+  to: string,
+) {
+  const sections = await tx.pricingSection.findMany({
+    where: { formId: from },
+    include: { items: true },
+  });
+  for (const section of sections) {
+    await tx.pricingSection.create({
+      data: {
+        formId: to,
+        title: section.title,
+        subtitle: section.subtitle,
+        sortOrder: section.sortOrder,
+        active: section.active,
+        items: {
+          create: section.items.map((item) => ({
+            title: item.title,
+            description: item.description,
+            price: item.price,
+            imageUrl: item.imageUrl,
+            kind: item.kind,
+            baseLock: baseLockFor(item.kind, to),
+            sortOrder: item.sortOrder,
+            active: item.active,
+          })),
+        },
+      },
+    });
+  }
+}
+
+/** Deletes uploaded files once no remaining item (in any form) points at them. */
+export async function releasePricingImages(urls: readonly (string | null | undefined)[]) {
+  const unique = [...new Set(urls.filter((url): url is string => Boolean(url)))];
+  if (unique.length === 0) return;
+  const stillUsed = await prisma.pricingItem.findMany({
+    where: { imageUrl: { in: unique } },
+    select: { imageUrl: true },
+  });
+  const used = new Set(stillUsed.map((item) => item.imageUrl));
+  await Promise.all(unique.filter((url) => !used.has(url)).map(deletePricingImage));
 }

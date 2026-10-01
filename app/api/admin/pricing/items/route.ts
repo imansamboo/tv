@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
   const section = await prisma.pricingSection.findUnique({
     where: { id: parsed.data.sectionId },
-    select: { id: true },
+    select: { id: true, formId: true },
   });
   if (!section) {
     return NextResponse.json({ error: "بخش پیدا نشد." }, { status: 404 });
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         price: price.price,
         imageUrl,
         kind: parsed.data.kind,
-        baseLock: baseLockFor(parsed.data.kind),
+        baseLock: baseLockFor(parsed.data.kind, section.formId),
         active: parsed.data.active ?? true,
         sortOrder: await nextItemOrder(section.id),
       },

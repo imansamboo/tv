@@ -8,7 +8,7 @@ import { toFaDigits } from "@/lib/format";
 
 const links = [
   { href: "/admin", label: "نیازمندی‌ها" },
-  { href: "/admin/pricing", label: "تنظیم فرم قیمت" },
+  { href: "/admin/pricing", label: "قالب پیش‌فرض فرم قیمت" },
   { href: "/admin/pricing-forms", label: "فرم‌های اختصاصی" },
   { href: "/admin/quotes", label: "قیمت‌گذاری‌ها" },
 ];

@@ -8,6 +8,8 @@ const schema = z.object({
   title: z.string().trim().min(2, "عنوان بخش را وارد کنید."),
   subtitle: z.string().trim().max(200, "توضیح بخش خیلی طولانی است.").optional(),
   active: z.boolean().optional(),
+  /** Omitted for the default template. */
+  formId: z.string().min(1).nullable().optional(),
 });
 
 export async function POST(request: Request) {
@@ -21,12 +23,18 @@ export async function POST(request: Request) {
     );
   }
 
+  const formId = parsed.data.formId ?? null;
+  if (formId && !(await prisma.pricingForm.findUnique({ where: { id: formId } }))) {
+    return NextResponse.json({ error: "فرم قیمت‌گذاری پیدا نشد." }, { status: 404 });
+  }
+
   const section = await prisma.pricingSection.create({
     data: {
+      formId,
       title: parsed.data.title,
       subtitle: parsed.data.subtitle || null,
       active: parsed.data.active ?? true,
-      sortOrder: await nextSectionOrder(),
+      sortOrder: await nextSectionOrder(formId),
     },
   });
 
