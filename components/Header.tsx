@@ -47,16 +47,16 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070b14]/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex min-w-0 items-center gap-3">
           <Image
             src="/logo.png"
             alt={SITE_NAME}
-            width={36}
-            height={36}
-            className="h-9 w-9 rounded-2xl object-cover"
+            width={160}
+            height={56}
+            className="h-12 w-[7.5rem] shrink-0 object-contain object-center sm:h-14 sm:w-[9rem]"
             priority
           />
-          <span>
+          <span className="min-w-0">
             <span className="block text-sm font-bold">{SITE_NAME}</span>
             <span className="block text-[11px] text-white/50">
               فرم نیازمندی‌های سایت فروشگاه
