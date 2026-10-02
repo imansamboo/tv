@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google";
 import { ChatBot } from "@/components/ChatBot";
 import { Header } from "@/components/Header";
+import { SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
 const vazirmatn = Vazirmatn({
@@ -10,9 +11,10 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: "فریمان | فرم نیازمندی‌های سایت فروش تلویزیون",
+  title: `${SITE_NAME} | فرم نیازمندی‌های سایت فروشگاه`,
   description:
-    "جمع‌آوری نیازمندی‌های صاحب فروشگاه برای طراحی سایت فروش تلویزیون: کاتالوگ، تجربه خرید، پرداخت و پنل مدیریت",
+    "جمع‌آوری نیازمندی‌های صاحب فروشگاه برای طراحی سایت آنلاین: کاتالوگ، تجربه خرید، پرداخت و پنل مدیریت",
+  icons: { icon: "/logo.png", apple: "/logo.png" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

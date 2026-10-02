@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
+import { SITE_NAME } from "@/lib/site";
 
 type User = {
   email: string;
@@ -46,11 +48,16 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070b14]/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-amber-400 text-lg font-black text-black">
-            TV
-          </span>
+          <Image
+            src="/logo.png"
+            alt={SITE_NAME}
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-2xl object-cover"
+            priority
+          />
           <span>
-            <span className="block text-sm font-bold">فریمان</span>
+            <span className="block text-sm font-bold">{SITE_NAME}</span>
             <span className="block text-[11px] text-white/50">
               فرم نیازمندی‌های سایت فروشگاه
             </span>

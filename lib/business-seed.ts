@@ -69,7 +69,7 @@ const TV_FORM_INPUT: RequirementForm = {
           type: "text",
           label: "نام فروشگاه",
           hint: "نامی که مشتریان شما می‌شناسند",
-          placeholder: "مثلاً فریمان الکترونیک",
+          placeholder: "مثلاً دُکون بازار الکترونیک",
           required: true,
           minLength: 2,
           requiredMessage: "نام فروشگاه را وارد کنید.",
