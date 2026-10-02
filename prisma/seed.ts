@@ -1,5 +1,10 @@
 import { PrismaClient, type PricingItemKind } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  SPORTS_BUSINESS_ID,
+  SPORTS_BUSINESS_NAME,
+  SPORTS_REQUIREMENT_FORM,
+} from "../lib/business-sports-seed";
 import { TV_BUSINESS_ID, TV_BUSINESS_NAME, TV_REQUIREMENT_FORM } from "../lib/business-seed";
 import { customerInfo, normalizeRequirement } from "../lib/form";
 import { convertLegacyRequirement, isLegacyRequirement } from "../lib/legacy-requirement";
@@ -152,6 +157,20 @@ async function seedTvBusiness() {
   });
 }
 
+async function seedSportsBusiness() {
+  await prisma.business.upsert({
+    where: { id: SPORTS_BUSINESS_ID },
+    update: {},
+    create: {
+      id: SPORTS_BUSINESS_ID,
+      name: SPORTS_BUSINESS_NAME,
+      description: "فروشگاه اینترنتی پوشاک، کفش و لوازم ورزشی",
+      sortOrder: 1,
+      form: JSON.stringify(SPORTS_REQUIREMENT_FORM),
+    },
+  });
+}
+
 /**
  * Customers registered before businesses existed filled the hard-coded TV
  * form, so they are moved to the TV business and their answers converted.
@@ -211,6 +230,7 @@ async function main() {
 
   await seedPricingForm();
   await seedTvBusiness();
+  await seedSportsBusiness();
   await migrateLegacyCustomers();
 }
 
