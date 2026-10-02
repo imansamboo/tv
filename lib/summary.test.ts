@@ -20,7 +20,7 @@ function withValues(values: RequirementData["values"], other: RequirementData["o
 
 const STORE_STEP = {
   contactName: "علی محمدی",
-  storeName: "فریمان الکترونیک",
+  storeName: "دُکون بازار الکترونیک",
   businessType: "both",
   existingWebsite: "none",
 };
@@ -42,7 +42,7 @@ test("more completed steps increase completion and feature count", () => {
   const filled = summarizeRequirements(form, data);
   assert.ok(filled.completionPercent > empty.completionPercent);
   assert.ok(filled.featureCount > empty.featureCount);
-  assert.ok(filled.highlights.some((item) => item.value.includes("فریمان")));
+  assert.ok(filled.highlights.some((item) => item.value.includes("دُکون بازار")));
   const brands = filled.highlights.find((item) => item.label === "برندها");
   assert.ok(brands?.value.includes("سونی"));
   assert.ok(brands?.value.includes("تی‌سی‌ال"));

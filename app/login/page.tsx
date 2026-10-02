@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
+import { SITE_NAME } from "@/lib/site";
 
 function LoginForm() {
   const router = useRouter();
@@ -53,7 +54,7 @@ function LoginForm() {
       onSubmit={onSubmit}
       className="mx-auto max-w-md space-y-4 rounded-3xl border border-white/10 bg-[#101826] p-8"
     >
-      <h1 className="text-2xl font-black">ورود به فریمان</h1>
+      <h1 className="text-2xl font-black">ورود به {SITE_NAME}</h1>
       <p className="text-sm text-white/60">
         با ایمیلی که ثبت کرده‌اید وارد شوید. تأیید ایمیل لازم نیست.
       </p>
