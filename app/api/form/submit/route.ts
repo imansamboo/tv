@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { BROKEN_FORM_ERROR, loadCustomerRequirement, requirementColumns } from "@/lib/business";
 import { notifyAdmins } from "@/lib/notifications";
+import { generateAndAssignPricingForm } from "@/lib/pricing-form-generator";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { firstInvalidStep } from "@/lib/validate";
@@ -45,6 +46,7 @@ export async function POST() {
   });
 
   await notifyAdmins("REQUIREMENT_SUBMITTED", session.sub);
+  await generateAndAssignPricingForm(session.sub, { force: true });
 
   return NextResponse.json({
     ok: true,
