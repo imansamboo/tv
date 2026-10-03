@@ -8,6 +8,11 @@ import {
 import { TV_BUSINESS_ID, TV_BUSINESS_NAME, TV_REQUIREMENT_FORM } from "../lib/business-seed";
 import { customerInfo, normalizeRequirement } from "../lib/form";
 import { convertLegacyRequirement, isLegacyRequirement } from "../lib/legacy-requirement";
+import {
+  PRICING_BASE_AMOUNT,
+  PRICING_ADDON_ENTRIES,
+} from "../lib/pricing-catalog";
+import { seedPricingFormsForSubmittedUsers } from "../lib/pricing-form-generator";
 
 const prisma = new PrismaClient();
 
@@ -30,83 +35,52 @@ type SeedSection = {
  * Starting point for the pricing form. Fixed ids keep the seed idempotent; the
  * admin panel is the source of truth from here on.
  */
+/** Default admin template — base package plus sample optional rows. */
 const PRICING_SECTIONS: SeedSection[] = [
   {
-    id: "seed-section-website",
-    title: "وب‌سایت",
-    subtitle: "هسته سایت فروش تلویزیون و امکانات فروشگاهی آن",
+    id: "seed-section-base",
+    title: "سایت پایه",
+    subtitle: "صفحات اصلی فروشگاه آنلاین",
     items: [
       {
         id: "seed-item-base",
-        title: "سایت پایه فروش تلویزیون",
+        title: "پکیج پایه فروشگاه",
         description:
-          "طراحی اختصاصی، صفحه محصول، سبد خرید، پنل مدیریت سفارش و راه‌اندازی روی دامنه شما.",
-        price: 50_000_000,
+          "شامل: صفحه اصلی، طراحی صفحه اصلی، صفحه محصول، لیست محصولات، درباره ما، تماس با ما، صفحه خدمات، سبد خرید، پنل مدیریت سفارش و راه‌اندازی روی دامنه شما.",
+        price: PRICING_BASE_AMOUNT,
         kind: "BASE",
       },
+    ],
+  },
+  {
+    id: "seed-section-sample",
+    title: "نمونه امکانات",
+    subtitle: "الگوی آیتم‌های اختیاری — در فرم اختصاصی هر مشتری متفاوت است",
+    items: [
       {
         id: "seed-item-gateway",
         title: "درگاه پرداخت آنلاین",
         description: "اتصال به درگاه بانکی و تسویه خودکار سفارش‌های اینترنتی.",
-        price: 5_000_000,
+        price: 15_000_000,
       },
       {
-        id: "seed-item-compare",
-        title: "مقایسه و فیلتر پیشرفته",
-        description: "مقایسه چند مدل تلویزیون و فیلتر بر اساس اینچ، برند، پنل و قیمت.",
-        price: 6_000_000,
-      },
-      {
-        id: "seed-item-installment",
-        title: "خرید اقساطی",
-        description: "نمایش طرح‌های پرداخت اقساطی و محاسبه سود روی صفحه محصول.",
-        price: 9_000_000,
+        id: "seed-item-filters",
+        title: "فیلتر پیشرفته",
+        description: "فیلتر برند، قیمت و مشخصات فنی در لیست محصولات.",
+        price: 12_000_000,
       },
     ],
   },
   {
-    id: "seed-section-marketing",
-    title: "بازاریابی",
-    subtitle: "ابزارهای جذب مشتری و اطلاع‌رسانی",
-    items: [
-      {
-        id: "seed-item-seo",
-        title: "بهینه‌سازی موتور جستجو",
-        description: "ساختار فنی سئو، آدرس‌های خوانا و بهینه‌سازی سرعت صفحه‌ها.",
-        price: 7_000_000,
-      },
-      {
-        id: "seed-item-sms",
-        title: "پیامک اطلاع‌رسانی",
-        description: "اطلاع‌رسانی وضعیت سفارش و کمپین تخفیف با پیامک.",
-        price: 2_000_000,
-      },
-      {
-        id: "seed-item-blog",
-        title: "مجله و راهنمای خرید",
-        description: "بخش مقاله برای راهنمای انتخاب تلویزیون و جذب مشتری از جستجو.",
-        price: 4_000_000,
-      },
-    ],
-  },
-  {
-    id: "seed-section-reporting",
-    title: "گزارش‌گیری",
-    subtitle: "ابزارهای مدیریتی برای پیگیری فروش و موجودی",
-    items: [
-      {
-        id: "seed-item-reports",
-        title: "گزارش پیشرفته فروش",
-        description: "گزارش فروش بر اساس برند، سایز و بازه زمانی همراه با نمودار.",
-        price: 8_000_000,
-      },
-      {
-        id: "seed-item-excel",
-        title: "خروجی اکسل",
-        description: "خروجی اکسل سفارش‌ها، مشتریان و موجودی انبار.",
-        price: 3_000_000,
-      },
-    ],
+    id: "seed-section-advanced",
+    title: "امکانات پیشرفته",
+    subtitle: "افزونه‌های هوشمند و رصد بازار",
+    items: PRICING_ADDON_ENTRIES.map((entry, index) => ({
+      id: `seed-${entry.id}`,
+      title: entry.title,
+      description: entry.description,
+      price: [20_000_000, 35_000_000, 18_000_000, 25_000_000][index] ?? 15_000_000,
+    })),
   },
 ];
 
@@ -232,6 +206,7 @@ async function main() {
   await seedTvBusiness();
   await seedSportsBusiness();
   await migrateLegacyCustomers();
+  await seedPricingFormsForSubmittedUsers();
 }
 
 main()
