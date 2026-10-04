@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
+import { PersianCaptchaField, usePersianCaptcha } from "@/components/PersianCaptchaField";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
 import { SITE_NAME } from "@/lib/site";
 
@@ -14,8 +15,11 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const captcha = usePersianCaptcha();
+  const { refresh: refreshCaptcha } = captcha;
 
   useEffect(() => {
+    void refreshCaptcha();
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((payload) => {
@@ -24,7 +28,7 @@ function LoginForm() {
         }
       })
       .finally(() => setCheckingSession(false));
-  }, [router, search]);
+  }, [router, search, refreshCaptcha]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -33,12 +37,18 @@ function LoginForm() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+        captchaToken: captcha.token,
+        captchaAnswer: captcha.answer,
+      }),
     });
     const payload = await res.json();
     setBusy(false);
     if (!res.ok) {
       setError(payload.error || "ورود ناموفق بود.");
+      await captcha.refresh();
       return;
     }
     router.push(search.get("next") || payload.next || "/form");
@@ -76,6 +86,15 @@ function LoginForm() {
           required
         />
       </Field>
+      <PersianCaptchaField
+        token={captcha.token}
+        question={captcha.question}
+        answer={captcha.answer}
+        loading={captcha.loading}
+        error={captcha.error}
+        onAnswerChange={captcha.setAnswer}
+        onRefresh={() => void captcha.refresh()}
+      />
       {error && <p className="text-sm text-rose-400">{error}</p>}
       <PrimaryButton type="submit" disabled={busy} className="w-full">
         {busy ? "در حال ورود..." : "ورود"}

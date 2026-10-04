@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { PersianCaptchaField, usePersianCaptcha } from "@/components/PersianCaptchaField";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
 import type { BusinessOption } from "@/lib/business";
 
@@ -17,15 +18,18 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const captcha = usePersianCaptcha();
+  const { refresh: refreshCaptcha } = captcha;
 
   useEffect(() => {
+    void refreshCaptcha();
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((payload) => {
         if (payload.user) router.replace("/form");
       })
       .finally(() => setCheckingSession(false));
-  }, [router]);
+  }, [router, refreshCaptcha]);
 
   useEffect(() => {
     fetch("/api/businesses")
@@ -49,12 +53,20 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, businessId }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        businessId,
+        captchaToken: captcha.token,
+        captchaAnswer: captcha.answer,
+      }),
     });
     const payload = await res.json();
     setBusy(false);
     if (!res.ok) {
       setError(payload.error || "ثبت‌نام ناموفق بود.");
+      await captcha.refresh();
       return;
     }
     router.push("/form");
@@ -128,6 +140,15 @@ export default function RegisterPage() {
           required
         />
       </Field>
+      <PersianCaptchaField
+        token={captcha.token}
+        question={captcha.question}
+        answer={captcha.answer}
+        loading={captcha.loading}
+        error={captcha.error}
+        onAnswerChange={captcha.setAnswer}
+        onRefresh={() => void captcha.refresh()}
+      />
       {error && <p className="text-sm text-rose-400">{error}</p>}
       <PrimaryButton type="submit" disabled={busy} className="w-full">
         {busy ? "در حال ثبت..." : "ساخت حساب و ورود به فرم"}
