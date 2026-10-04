@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { PersianCaptchaField, usePersianCaptcha } from "@/components/PersianCaptchaField";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
 import type { BusinessOption } from "@/lib/business";
+import { captchaInputError } from "@/lib/captcha";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -40,6 +41,12 @@ export default function RegisterPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    setError("");
+    const captchaError = captchaInputError(captcha.token, captcha.answer);
+    if (captchaError) {
+      setError(captchaError);
+      return;
+    }
     if (password !== confirm) {
       setError("تکرار رمز عبور یکسان نیست.");
       return;
@@ -49,7 +56,6 @@ export default function RegisterPage() {
       return;
     }
     setBusy(true);
-    setError("");
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -86,6 +92,15 @@ export default function RegisterPage() {
       <p className="text-sm text-white/60">
         با ایمیل و رمز عبور حساب بسازید، کسب‌وکار خود را انتخاب کنید و نیازمندی‌های سایت آن را ثبت کنید.
       </p>
+      <PersianCaptchaField
+        token={captcha.token}
+        question={captcha.question}
+        answer={captcha.answer}
+        loading={captcha.loading}
+        error={captcha.error}
+        onAnswerChange={captcha.setAnswer}
+        onRefresh={() => void captcha.refresh()}
+      />
       <Field label="نام و نام خانوادگی">
         <input
           className={fieldClass}
@@ -140,15 +155,6 @@ export default function RegisterPage() {
           required
         />
       </Field>
-      <PersianCaptchaField
-        token={captcha.token}
-        question={captcha.question}
-        answer={captcha.answer}
-        loading={captcha.loading}
-        error={captcha.error}
-        onAnswerChange={captcha.setAnswer}
-        onRefresh={() => void captcha.refresh()}
-      />
       {error && <p className="text-sm text-rose-400">{error}</p>}
       <PrimaryButton type="submit" disabled={busy} className="w-full">
         {busy ? "در حال ثبت..." : "ساخت حساب و ورود به فرم"}

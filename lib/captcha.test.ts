@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   CAPTCHA_INVALID_MESSAGE,
+  CAPTCHA_LOADING_MESSAGE,
+  CAPTCHA_REQUIRED_MESSAGE,
+  captchaInputError,
   createCaptchaChallenge,
   parseCaptchaAnswer,
+  requireValidCaptcha,
   verifyCaptcha,
 } from "./captcha";
 import { toFaDigits } from "./format";
@@ -36,6 +40,24 @@ test("parseCaptchaAnswer normalizes Persian digits", () => {
   assert.equal(parseCaptchaAnswer("  ۱۲ "), 12);
   assert.equal(parseCaptchaAnswer("7"), 7);
   assert.equal(parseCaptchaAnswer("abc"), null);
+});
+
+test("captcha input is checked before other fields", () => {
+  assert.equal(captchaInputError("", ""), CAPTCHA_LOADING_MESSAGE);
+  assert.equal(captchaInputError("token", ""), CAPTCHA_REQUIRED_MESSAGE);
+  assert.equal(captchaInputError("token", "  "), CAPTCHA_REQUIRED_MESSAGE);
+  assert.equal(captchaInputError("token", "7"), null);
+});
+
+test("requireValidCaptcha rejects bad answers before credential checks would run", async () => {
+  const challenge = await createCaptchaChallenge();
+  const missing = await requireValidCaptcha(challenge.token, "");
+  assert.equal(missing.ok, false);
+  if (!missing.ok) assert.equal(missing.error, CAPTCHA_REQUIRED_MESSAGE);
+
+  const wrong = await requireValidCaptcha(challenge.token, "99999");
+  assert.equal(wrong.ok, false);
+  if (!wrong.ok) assert.equal(wrong.error, CAPTCHA_INVALID_MESSAGE);
 });
 
 test("invalid captcha answers are rejected", async () => {
