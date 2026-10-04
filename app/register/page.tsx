@@ -92,15 +92,6 @@ export default function RegisterPage() {
       <p className="text-sm text-white/60">
         با ایمیل و رمز عبور حساب بسازید، کسب‌وکار خود را انتخاب کنید و نیازمندی‌های سایت آن را ثبت کنید.
       </p>
-      <PersianCaptchaField
-        token={captcha.token}
-        question={captcha.question}
-        answer={captcha.answer}
-        loading={captcha.loading}
-        error={captcha.error}
-        onAnswerChange={captcha.setAnswer}
-        onRefresh={() => void captcha.refresh()}
-      />
       <Field label="نام و نام خانوادگی">
         <input
           className={fieldClass}
@@ -155,6 +146,15 @@ export default function RegisterPage() {
           required
         />
       </Field>
+      <PersianCaptchaField
+        token={captcha.token}
+        question={captcha.question}
+        answer={captcha.answer}
+        loading={captcha.loading}
+        error={captcha.error}
+        onAnswerChange={captcha.setAnswer}
+        onRefresh={() => void captcha.refresh()}
+      />
       {error && <p className="text-sm text-rose-400">{error}</p>}
       <PrimaryButton type="submit" disabled={busy} className="w-full">
         {busy ? "در حال ثبت..." : "ساخت حساب و ورود به فرم"}
