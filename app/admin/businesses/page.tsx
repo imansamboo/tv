@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { GenerateBusinessFormModal } from "@/components/admin/GenerateBusinessFormModal";
 import { AdminShell } from "@/components/AdminShell";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
 import type { BusinessSummary } from "@/lib/business";
@@ -15,12 +16,17 @@ export default function AdminBusinessesPage() {
   const [copyFromId, setCopyFromId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [generateOpen, setGenerateOpen] = useState(false);
 
-  useEffect(() => {
+  function reloadBusinesses() {
     fetch("/api/admin/businesses")
       .then((res) => res.json())
       .then((payload) => setBusinesses(payload.businesses || []))
       .catch(() => setBusinesses([]));
+  }
+
+  useEffect(() => {
+    reloadBusinesses();
   }, []);
 
   async function create(event: FormEvent) {
@@ -49,6 +55,12 @@ export default function AdminBusinessesPage() {
         کسب‌وکار بسازید؛ همه حالت‌های فرم قبلی (متن کوتاه و بلند، لیست کشویی، تک‌انتخابی، چندانتخابی و
         گزینه «سایر») در دسترس است.
       </p>
+
+      <div className="flex flex-wrap gap-3">
+        <PrimaryButton type="button" onClick={() => setGenerateOpen(true)}>
+          تولید فرم با هوش مصنوعی
+        </PrimaryButton>
+      </div>
 
       <form
         onSubmit={create}
@@ -139,6 +151,12 @@ export default function AdminBusinessesPage() {
           <p className="p-6 text-center text-white/45">در حال بارگذاری...</p>
         ) : null}
       </div>
+
+      <GenerateBusinessFormModal
+        open={generateOpen}
+        onClose={() => setGenerateOpen(false)}
+        onComplete={reloadBusinesses}
+      />
     </AdminShell>
   );
 }
