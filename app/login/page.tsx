@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { PersianCaptchaField, usePersianCaptcha } from "@/components/PersianCaptchaField";
 import { Field, fieldClass, PrimaryButton } from "@/components/ui";
+import { captchaInputError } from "@/lib/captcha";
 import { SITE_NAME } from "@/lib/site";
 
 function LoginForm() {
@@ -32,8 +33,13 @@ function LoginForm() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    setBusy(true);
     setError("");
+    const captchaError = captchaInputError(captcha.token, captcha.answer);
+    if (captchaError) {
+      setError(captchaError);
+      return;
+    }
+    setBusy(true);
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -68,6 +74,15 @@ function LoginForm() {
       <p className="text-sm text-white/60">
         با ایمیلی که ثبت کرده‌اید وارد شوید. تأیید ایمیل لازم نیست.
       </p>
+      <PersianCaptchaField
+        token={captcha.token}
+        question={captcha.question}
+        answer={captcha.answer}
+        loading={captcha.loading}
+        error={captcha.error}
+        onAnswerChange={captcha.setAnswer}
+        onRefresh={() => void captcha.refresh()}
+      />
       <Field label="ایمیل">
         <input
           className={fieldClass}
@@ -86,15 +101,6 @@ function LoginForm() {
           required
         />
       </Field>
-      <PersianCaptchaField
-        token={captcha.token}
-        question={captcha.question}
-        answer={captcha.answer}
-        loading={captcha.loading}
-        error={captcha.error}
-        onAnswerChange={captcha.setAnswer}
-        onRefresh={() => void captcha.refresh()}
-      />
       {error && <p className="text-sm text-rose-400">{error}</p>}
       <PrimaryButton type="submit" disabled={busy} className="w-full">
         {busy ? "در حال ورود..." : "ورود"}

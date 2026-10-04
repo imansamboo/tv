@@ -67,3 +67,22 @@ export async function verifyCaptcha(token: string, rawAnswer: string) {
 
 export const CAPTCHA_INVALID_MESSAGE = "پاسخ کد امنیتی درست نیست. دوباره تلاش کنید.";
 export const CAPTCHA_REQUIRED_MESSAGE = "پاسخ کد امنیتی را وارد کنید.";
+export const CAPTCHA_LOADING_MESSAGE =
+  "کد امنیتی هنوز آماده نیست. لطفاً صبر کنید یا دکمه «جدید» را بزنید.";
+
+/** Returns the first captcha input error, before any other field is checked. */
+export function captchaInputError(token: unknown, answer: unknown) {
+  const normalizedToken = typeof token === "string" ? token.trim() : "";
+  const normalizedAnswer = typeof answer === "string" ? answer.trim() : "";
+  if (!normalizedToken) return CAPTCHA_LOADING_MESSAGE;
+  if (!normalizedAnswer) return CAPTCHA_REQUIRED_MESSAGE;
+  return null;
+}
+
+export async function requireValidCaptcha(token: unknown, answer: unknown) {
+  const inputError = captchaInputError(token, answer);
+  if (inputError) return { ok: false as const, error: inputError };
+  const valid = await verifyCaptcha(String(token).trim(), String(answer).trim());
+  if (!valid) return { ok: false as const, error: CAPTCHA_INVALID_MESSAGE };
+  return { ok: true as const };
+}
