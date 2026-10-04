@@ -74,15 +74,6 @@ function LoginForm() {
       <p className="text-sm text-white/60">
         با ایمیلی که ثبت کرده‌اید وارد شوید. تأیید ایمیل لازم نیست.
       </p>
-      <PersianCaptchaField
-        token={captcha.token}
-        question={captcha.question}
-        answer={captcha.answer}
-        loading={captcha.loading}
-        error={captcha.error}
-        onAnswerChange={captcha.setAnswer}
-        onRefresh={() => void captcha.refresh()}
-      />
       <Field label="ایمیل">
         <input
           className={fieldClass}
@@ -101,6 +92,15 @@ function LoginForm() {
           required
         />
       </Field>
+      <PersianCaptchaField
+        token={captcha.token}
+        question={captcha.question}
+        answer={captcha.answer}
+        loading={captcha.loading}
+        error={captcha.error}
+        onAnswerChange={captcha.setAnswer}
+        onRefresh={() => void captcha.refresh()}
+      />
       {error && <p className="text-sm text-rose-400">{error}</p>}
       <PrimaryButton type="submit" disabled={busy} className="w-full">
         {busy ? "در حال ورود..." : "ورود"}
