@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { cookieOptions, signSession, SESSION_COOKIE } from "@/lib/auth";
+import {
+  CAPTCHA_INVALID_MESSAGE,
+  CAPTCHA_REQUIRED_MESSAGE,
+  verifyCaptcha,
+} from "@/lib/captcha";
 import { prisma } from "@/lib/prisma";
 import { initialRequirement, loadBusinessForm } from "@/lib/business";
 
@@ -10,6 +15,8 @@ const schema = z.object({
   email: z.string().trim().toLowerCase().email("ایمیل معتبر نیست."),
   password: z.string().min(6, "رمز عبور حداقل ۶ کاراکتر باشد."),
   businessId: z.string({ error: "کسب‌وکار خود را انتخاب کنید." }).trim().min(1, "کسب‌وکار خود را انتخاب کنید."),
+  captchaToken: z.string().trim().min(1, CAPTCHA_REQUIRED_MESSAGE),
+  captchaAnswer: z.string().trim().min(1, CAPTCHA_REQUIRED_MESSAGE),
 });
 
 export async function POST(request: Request) {
@@ -20,6 +27,11 @@ export async function POST(request: Request) {
       { error: parsed.error.issues[0]?.message || "اطلاعات نامعتبر است." },
       { status: 400 },
     );
+  }
+
+  const captchaOk = await verifyCaptcha(parsed.data.captchaToken, parsed.data.captchaAnswer);
+  if (!captchaOk) {
+    return NextResponse.json({ error: CAPTCHA_INVALID_MESSAGE }, { status: 400 });
   }
 
   const { name, email, password, businessId } = parsed.data;
